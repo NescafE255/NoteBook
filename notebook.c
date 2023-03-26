@@ -133,18 +133,39 @@ void show_plansCertainDay(){
 
 void change_notes(){
     printf("Введіть заголовок який хочете змінити\n");
-    char name_titel[50];
-    // fgets(name_titel, sizeof(name_titel), stdin);
-    scanf("%s", name_titel);
+    char name_changeNote[50];
+    fgets(name_changeNote, sizeof(name_changeNote), stdin);
+    // scanf("%s", name_changeNote);
 
     for(int i = 0; i < num_notes; i++){
-        printf("%s", notes[i].title);
-        printf("%s", name_titel);
-        if(notes[i].title == name_titel){
-            printf("%s", notes[i].body);
+        if(strcmp(notes[i].title, name_changeNote) == 0){
+            printf("Введіть новий заголовок: ");
+            fgets(notes[i].title, sizeof(notes->title), stdin);
+
+            printf("Введіть текст: ");
+            fgets(notes[i].body, sizeof(notes->body), stdin);
+
+            printf("Введіть нову дату та час, коли потрінбно нагадати (у форматі \"dd.mm.yyyy\"): ");
+            char input[50];
+            fgets(input, sizeof(input), stdin);
+
+
+            int day, mon, year;
+            
+            if(sscanf(input, "%d.%d.%d", &day, &mon, &year) != 3){
+                printf("Помилка введення дати. Спробуйте ще раз.\n");
+                break;
+            }
+
+            notes[i].due_time.tm_mday = day;
+            notes[i].due_time.tm_mon = mon - 1;
+            notes[i].due_time.tm_year = year - 1900;
+
+            printf("Нотатка переписана");
+        } else {
+            printf("Запис не знайдено!");
             break;
-        } else
-            printf("LOL");
+        }
     }
 }
 
