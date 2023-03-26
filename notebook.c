@@ -131,7 +131,22 @@ void show_plansCertainDay(){
     }
 }
 
+void change_notes(){
+    printf("Введіть заголовок який хочете змінити\n");
+    char name_titel[50];
+    // fgets(name_titel, sizeof(name_titel), stdin);
+    scanf("%s", name_titel);
 
+    for(int i = 0; i < num_notes; i++){
+        printf("%s", notes[i].title);
+        printf("%s", name_titel);
+        if(notes[i].title == name_titel){
+            printf("%s", notes[i].body);
+            break;
+        } else
+            printf("LOL");
+    }
+}
 
 
 void show_note(){
