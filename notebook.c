@@ -5,10 +5,12 @@
 
 #define MAX_NOTES 100
 
+
 struct note{
     char title[50];
     char body[1000];
-    time_t due_date;
+    struct tm due_time;
+    // time_t due_date1;
 };
 
 struct note notes[MAX_NOTES];
@@ -42,18 +44,18 @@ void add_note(){
     }
 
 
-    struct tm tm;
-    memset(&tm, 0, sizeof(struct tm));
-
-    tm.tm_mday = day;
-    tm.tm_mon = month - 1;
-    tm.tm_year = year - 1900;
-    tm.tm_hour = 0;
-    tm.tm_min = 0;
-    tm.tm_sec = 0;
+    // struct tm tm;
+    // memset(&note, 0, sizeof(struct tm));
+    // new_note.due_time->tm_hour;
+    new_note.due_time.tm_mday = day;
+    new_note.due_time.tm_mon = month - 1;
+    new_note.due_time.tm_year = year - 1900;
+    new_note.due_time.tm_hour = 0;
+    new_note.due_time.tm_min = 0;
+    new_note.due_time.tm_sec = 0;
     
     
-    new_note.due_date = mktime(&tm);
+    // new_note.due_date = mktime(&tm);
 
 
     notes[num_notes] = new_note;
@@ -62,30 +64,36 @@ void add_note(){
 }
 
 
-time_t time_now(){
-    const time_t current_time = time(NULL);
-    struct tm *local_time = localtime(&current_time);
-    local_time->tm_hour = 0;
-    local_time->tm_min = 0;
-    local_time->tm_sec = 0;
-    // struct tm tm;
-    // tm.tm_mday = local_time->tm_mday;
-    // tm.tm_mon = local_time->tm_mon;
-    // tm.tm_year = local_time->tm_year;
-    // tm.tm_hour = 0;
-    // tm.tm_min = 0;
-    // tm.tm_sec = 0;
+// time_t time_now(){
+//     const time_t current_time = time(NULL);
+//     struct tm *local_time = localtime(&current_time);
+//     // local_time->tm_hour = 0;
+//     // local_time->tm_min = 0;
+//     // local_time->tm_sec = 0;
+//     // struct tm tm;
+//     // tm.tm_mday = local_time->tm_mday;
+//     // tm.tm_mon = local_time->tm_mon;
+//     // tm.tm_year = local_time->tm_year;
+//     // tm.tm_hour = 0;
+//     // tm.tm_min = 0;
+//     // tm.tm_sec = 0;
 
-    return mktime(local_time);
-}
+//     return mktime(local_time);
+// }
 
 void show_noteToday(){
-    time_t current_time = time_now();
+    time_t current_time = time(NULL);
+    struct tm *local_time = localtime(&current_time);
+    int count = 1;
     for(int i = 0; i < num_notes; i++){
-        if(notes[i].due_date == current_time){
-            printf("Сьогодні в тебе такі то справи\n [%d] - %s\n%s", i+1, notes[i].title, notes[i].body);
+        if(notes[i].due_time.tm_year == local_time->tm_year 
+        && notes[i].due_time.tm_mon == local_time->tm_mon
+        && notes[i].due_time.tm_mday == local_time->tm_mday){
+            printf("Сьогодні в тебе такі то справи\n [%d] - %s\n%s", count, notes[i].title, notes[i].body);
             printf("--------\n");
+            count++;
         }
+
     }    
 }
 
@@ -110,11 +118,13 @@ void show_plansCertainDay(){
     tm.tm_min = 0;
     tm.tm_sec = 0;
 
-    time_t time_second = mktime(&tm);
+    // time_t time_second = mktime(&tm);
 
     for(int i = 0; i < num_notes; i++){
-        if(notes[i].due_date == time_second){
-            printf("Ваші плант на %s\n", input);
+        if(notes[i].due_time.tm_year == tm.tm_year 
+        && notes[i].due_time.tm_mon == tm.tm_mon
+        && notes[i].due_time.tm_mday == tm.tm_mday){
+            printf("Ваші плани на %s\n", input);
             printf("[%d] - %s\n%s", i+1, notes[i].title, notes[i].body);
             printf("--------\n");
         }
@@ -122,16 +132,20 @@ void show_plansCertainDay(){
 }
 
 
+
+
 void show_note(){
     for(int i = 0; i < num_notes; i++){
         printf("*****\n");
         printf("Заголовок: %s", notes[i].title);
         printf("Сам текст: %s", notes[i].body);
-        struct tm *local_time = localtime(&notes[i].due_date);
+        // struct tm *local_time = localtime(&notes[i].due_time);
 
-        char data_time[50];
-        strftime(data_time, sizeof(data_time), "Date: %d.%m.%Y\n", local_time);
-        printf("%s", data_time);
+        // char data_time[50];
+        // strftime(data_time, sizeof(data_time), "Date: %d.%m.%Y\n", local_time);
+        printf("Date: %02d.%02d.%04d\n",  notes[i].due_time.tm_mday,
+                                    notes[i].due_time.tm_mon + 1,
+                                    notes[i].due_time.tm_year + 1900);
 
         printf("*****\n");
     }
@@ -165,21 +179,29 @@ int main(){
         printf("1: Додати нагадування\n");
         printf("2: Переглянути нагадування\n");
         printf("3: Показати плани на певний день\n");
-        printf("4: Вийти!\n");
+        printf("4: Змінити нагадування\n");
+        printf("5: Вийти!\n");
         scanf("%d%*c", &choice);
         switch(choice){
             case 1:
                 add_note();
+                printf("\n");
                 break;
             case 2:
                 show_note();
                 if(num_notes == 0)
                     printf("Empty\n");
+                printf("\n");
                 break;
             case 3:
                 show_plansCertainDay();
+                printf("\n");
                 break;
             case 4:
+                change_notes();
+                printf("\n");
+                break;
+            case 5:
                 printf("Good bay!\n");
                 exit(0);
             default:
