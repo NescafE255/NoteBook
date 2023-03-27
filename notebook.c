@@ -170,6 +170,23 @@ void change_notes(){
 }
 
 
+
+void delete_note(){
+    printf("Введіть назву нотатки яку хочете видалити: ");
+    char name_delete_note[50];
+    fgets(name_delete_note, sizeof(name_delete_note), stdin);
+    for(int i = 0; i < num_notes; i++){
+        if(strcmp(notes[i].title, name_delete_note) == 0){
+            for(int j = i; j < num_notes - 1; j++){
+                printf("%d ", num_notes);
+                notes[j] = notes[j+1];
+            }
+            num_notes--;
+        }
+    }
+}
+
+
 void show_note(){
     for(int i = 0; i < num_notes; i++){
         printf("*****\n");
@@ -185,8 +202,6 @@ void show_note(){
 
         printf("*****\n");
     }
-
-
 }
 
 
@@ -216,7 +231,8 @@ int main(){
         printf("2: Переглянути нагадування\n");
         printf("3: Показати плани на певний день\n");
         printf("4: Змінити нагадування\n");
-        printf("5: Вийти!\n");
+        printf("5: Видалити нагадування\n");
+        printf("6: Вийти!\n");
         scanf("%d%*c", &choice);
         switch(choice){
             case 1:
@@ -238,6 +254,9 @@ int main(){
                 printf("\n");
                 break;
             case 5:
+                delete_note();
+                break;
+            case 6:
                 printf("Good bay!\n");
                 exit(0);
             default:
