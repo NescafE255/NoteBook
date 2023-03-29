@@ -17,6 +17,7 @@ struct note{
 
 struct note notes[MAX_NOTES];
 int num_notes = 0;
+//XXX Use const or define
 char *name_file = "notes.txt";
 
 
@@ -75,6 +76,7 @@ void load_notes(){
 
 int chek_titel(char *line){
     for(int i = 0; i < num_notes; i++){
+	    //XXX Be careful. strcmp will treat "LolKek" and "lolkek" as the same.
         if(strcmp(notes[i].title, line) == 0){
             printf("Запис із таким заголовком існує\n");
             // printf("\n");
@@ -97,6 +99,7 @@ void add_note(){
     printf("Введіть заголовок: ");
     fgets(new_note.title, sizeof(new_note.title), stdin);
 
+    //XXX Could be simplified to if (check_title(...))
     int INT_chek = chek_titel(new_note.title);
     if(INT_chek == 1)
         return add_note();
@@ -123,6 +126,7 @@ void add_note(){
     new_note.due_time.tm_mday = day;
     new_note.due_time.tm_mon = month - 1;
     new_note.due_time.tm_year = year - 1900;
+	//XXX No need to zero it. It is not used currently, so it does not matter.
     new_note.due_time.tm_hour = 0;
     new_note.due_time.tm_min = 0;
     new_note.due_time.tm_sec = 0;
@@ -155,6 +159,7 @@ void add_note(){
 // }
 
 void show_noteToday(){
+	//XXX: Could be simplyfied. localtime(NULL);
     time_t current_time = time(NULL);
     struct tm *local_time = localtime(&current_time);
     int count = 1;
@@ -187,6 +192,7 @@ void show_plansCertainDay(){
     tm.tm_mday = day;
     tm.tm_mon = mon - 1;
     tm.tm_year = year - 1900;
+    //XXX Redundand zeroing
     tm.tm_hour = 0;
     tm.tm_min = 0;
     tm.tm_sec = 0;
@@ -202,9 +208,11 @@ void show_plansCertainDay(){
             printf("--------\n");
         }
     }
+    //XXX Consider stopping program while user examining notes for the certain day
 }
 
 void change_notes(){
+	//XXX Consider number here. Title is not userfrienldy
     printf("Введіть заголовок який хочете змінити\n");
     int flag = 0;
     char name_changeNote[50];
@@ -213,6 +221,7 @@ void change_notes(){
 
 
     for(int i = 0; i < num_notes; i++){
+	    //XXX Be careful! Not case sensitive
         if(strcmp(notes[i].title, name_changeNote) == 0){
             printf("Введіть новий заголовок: ");
             fgets(notes[i].title, sizeof(notes->title), stdin);
@@ -244,10 +253,12 @@ void change_notes(){
             notes[i].due_time.tm_mday = day;
             notes[i].due_time.tm_mon = mon - 1;
             notes[i].due_time.tm_year = year - 1900;
+	    //XXX flag is redundand. Just return here and that's it
             flag = 1;
             printf("Нотатка переписана");
         } 
     }
+    //XXX Remove next line
     if(flag == 0)
         printf("Запис не знайдено!\n");
 }
@@ -257,6 +268,7 @@ void deleteNote(){
     char name_delete_note[50];
     fgets(name_delete_note, sizeof(name_delete_note), stdin);
     for(int i = 0; i < num_notes; i++){
+	    //XXX NICE! I would not be so smart :)
         if(strcmp(notes[i].title, name_delete_note) == 0){
             notes[i] = notes[num_notes - 1];
         }
@@ -265,7 +277,7 @@ void deleteNote(){
     printf("Нотатка видалена");
 }
 
-
+//XXX Comment out unused code. #if 0 for example
 void delete_note(){
     printf("Введіть назву нотатки яку хочете видалити: ");
     char name_delete_note[50];
