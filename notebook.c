@@ -20,8 +20,8 @@ int num_notes = 0;
 char *name_file = "notes.txt";
 
 
-void save_notes(){
-    FILE  *fp = fopen(name_file, "a");
+void save_notes(int chek_num_notes){
+    FILE  *fp = fopen(name_file, "w+");
     if(fp == NULL){
         printf("Error\n");
         return;
@@ -38,7 +38,8 @@ void save_notes(){
         fputs("\n", fp);
     }
     fclose(fp);
-    printf("Нотатки збережені до файлу");
+    printf("Нотатки збережені до файлу\n");
+
 }
 
 
@@ -72,6 +73,18 @@ void load_notes(){
 }
 
 
+int chek_titel(char *line){
+    for(int i = 0; i < num_notes; i++){
+        if(strcmp(notes[i].title, line) == 0){
+            printf("Запис із таким заголовком існує\n");
+            // printf("\n");
+            return 1;
+            // break;
+        }
+    }
+    return 0;
+}
+
 
 void add_note(){
     if(num_notes >= MAX_NOTES){
@@ -80,8 +93,14 @@ void add_note(){
     }
 
     struct note new_note;
+
     printf("Введіть заголовок: ");
     fgets(new_note.title, sizeof(new_note.title), stdin);
+
+    int INT_chek = chek_titel(new_note.title);
+    if(INT_chek == 1)
+        return add_note();
+
 
     printf("Введіть текст запису: ");
     fgets(new_note.body, sizeof(new_note.body), stdin);
@@ -187,14 +206,25 @@ void show_plansCertainDay(){
 
 void change_notes(){
     printf("Введіть заголовок який хочете змінити\n");
+    int flag = 0;
     char name_changeNote[50];
     fgets(name_changeNote, sizeof(name_changeNote), stdin);
     // scanf("%s", name_changeNote);
+
 
     for(int i = 0; i < num_notes; i++){
         if(strcmp(notes[i].title, name_changeNote) == 0){
             printf("Введіть новий заголовок: ");
             fgets(notes[i].title, sizeof(notes->title), stdin);
+
+
+
+            int INT_chek = chek_titel(notes[i].title);
+            if(INT_chek == 1){
+                printf("Введіть новий заголовок: ");
+                fgets(notes[i].title, sizeof(notes->title), stdin);
+                // break;
+            }
 
             printf("Введіть текст: ");
             fgets(notes[i].body, sizeof(notes->body), stdin);
@@ -214,13 +244,12 @@ void change_notes(){
             notes[i].due_time.tm_mday = day;
             notes[i].due_time.tm_mon = mon - 1;
             notes[i].due_time.tm_year = year - 1900;
-
+            flag = 1;
             printf("Нотатка переписана");
-        } else {
-            printf("Запис не знайдено!");
-            break;
-        }
+        } 
     }
+    if(flag == 0)
+        printf("Запис не знайдено!\n");
 }
 
 void deleteNote(){
@@ -284,13 +313,17 @@ void getCurrentDateTime(){
     printf("%s", date_time);
 }
 
+
+
 int main(){
     int choice;
+    int chek_num_notes = num_notes;
     // time_t current_time = time_now();
     // printf("%ld", current_time);
 
 
     while(1){
+        load_notes();
         getCurrentDateTime();
         show_noteToday();
         printf("Оберіть дію:\n");
@@ -300,7 +333,6 @@ int main(){
         printf("4: Змінити нагадування\n");
         printf("5: Видалити нагадування\n");
         printf("6: Вийти!\n");
-        printf("7: Save notes to file\n");
         scanf("%d%*c", &choice);
         switch(choice){
             case 1:
@@ -327,15 +359,10 @@ int main(){
             case 6:
                 printf("Good bay!\n");
                 exit(0);
-            case 7:
-                save_notes();
-                break;
-            case 8:
-                load_notes();
-                break;
             default:
                 printf("ERRor");
         }
+        save_notes(chek_num_notes);
     }
 
     return 0;
