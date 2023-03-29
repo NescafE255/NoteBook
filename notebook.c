@@ -4,18 +4,72 @@
 #include <time.h>
 
 #define MAX_NOTES 100
+#define MAX_TITLE_SYMBOLS 50
+#define MAX_BODY_SYMBOLS 1000
 
 
 struct note{
-    char title[50];
-    char body[1000];
+    char title[MAX_TITLE_SYMBOLS];
+    char body[MAX_BODY_SYMBOLS];
     struct tm due_time;
-    // time_t due_date1;
 };
+
 
 struct note notes[MAX_NOTES];
 int num_notes = 0;
+char *name_file = "notes.txt";
 
+
+void save_notes(){
+    FILE  *fp = fopen(name_file, "a");
+    if(fp == NULL){
+        printf("Error\n");
+        return;
+    }
+
+    for(int i = 0; i < num_notes; i++){
+
+        fputs(notes[i].title, fp);
+        fputs(notes[i].body, fp);
+
+        char date_time_str[50];
+        strftime(date_time_str, sizeof(date_time_str), "%d.%m.%Y", &notes[i].due_time);
+        fputs(date_time_str, fp);
+        fputs("\n", fp);
+    }
+    fclose(fp);
+    printf("Нотатки збережені до файлу");
+}
+
+
+void load_notes(){
+    FILE *fp = fopen(name_file, "r");
+    if(fp == NULL){
+        printf("Error\n");
+        return;
+    }
+
+
+    num_notes = 0;
+
+    int day, mon, year;
+    char line_note[1050];
+    while(fgets(line_note, sizeof(line_note), fp)){
+        strcpy(notes[num_notes].title, line_note);
+
+        fgets(line_note, sizeof(line_note), fp);
+        strcpy(notes[num_notes].body, line_note);
+
+        fgets(line_note, sizeof(line_note), fp);
+        sscanf(line_note, "%d.%d.%d", &day, &mon, &year);
+        notes[num_notes].due_time.tm_mday = day;
+        notes[num_notes].due_time.tm_mon = mon - 1;
+        notes[num_notes].due_time.tm_year = year - 1900;
+
+        num_notes++;
+    }
+    fclose(fp);
+}
 
 
 
@@ -169,6 +223,18 @@ void change_notes(){
     }
 }
 
+void deleteNote(){
+    printf("Введіть назву нотатки яку хочете видалити: ");
+    char name_delete_note[50];
+    fgets(name_delete_note, sizeof(name_delete_note), stdin);
+    for(int i = 0; i < num_notes; i++){
+        if(strcmp(notes[i].title, name_delete_note) == 0){
+            notes[i] = notes[num_notes - 1];
+        }
+    }
+    num_notes--;
+    printf("Нотатка видалена");
+}
 
 
 void delete_note(){
@@ -184,6 +250,7 @@ void delete_note(){
             num_notes--;
         }
     }
+    printf("Нотатка видалена");
 }
 
 
@@ -233,6 +300,7 @@ int main(){
         printf("4: Змінити нагадування\n");
         printf("5: Видалити нагадування\n");
         printf("6: Вийти!\n");
+        printf("7: Save notes to file\n");
         scanf("%d%*c", &choice);
         switch(choice){
             case 1:
@@ -254,14 +322,21 @@ int main(){
                 printf("\n");
                 break;
             case 5:
-                delete_note();
+                deleteNote();
                 break;
             case 6:
                 printf("Good bay!\n");
                 exit(0);
+            case 7:
+                save_notes();
+                break;
+            case 8:
+                load_notes();
+                break;
             default:
                 printf("ERRor");
         }
     }
+
     return 0;
 }
