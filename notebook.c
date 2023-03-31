@@ -2,10 +2,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 #define MAX_NOTES 100
 #define MAX_TITLE_SYMBOLS 50
 #define MAX_BODY_SYMBOLS 1000
+#define NAME_FILE "notes.txt"
 
 
 struct note{
@@ -17,19 +19,16 @@ struct note{
 
 struct note notes[MAX_NOTES];
 int num_notes = 0;
-//XXX Use const or define
-char *name_file = "notes.txt";
 
 
 void save_notes(int chek_num_notes){
-    FILE  *fp = fopen(name_file, "w+");
+    FILE  *fp = fopen(NAME_FILE, "w+");
     if(fp == NULL){
         printf("Error\n");
         return;
     }
 
     for(int i = 0; i < num_notes; i++){
-
         fputs(notes[i].title, fp);
         fputs(notes[i].body, fp);
 
@@ -39,13 +38,11 @@ void save_notes(int chek_num_notes){
         fputs("\n", fp);
     }
     fclose(fp);
-    printf("Нотатки збережені до файлу\n");
-
 }
 
 
 void load_notes(){
-    FILE *fp = fopen(name_file, "r");
+    FILE *fp = fopen(NAME_FILE, "r");
     if(fp == NULL){
         printf("Error\n");
         return;
@@ -74,17 +71,21 @@ void load_notes(){
 }
 
 
-int chek_titel(char *line){
-    for(int i = 0; i < num_notes; i++){
-	    //XXX Be careful. strcmp will treat "LolKek" and "lolkek" as the same.
-        if(strcmp(notes[i].title, line) == 0){
-            printf("Запис із таким заголовком існує\n");
-            // printf("\n");
-            return 1;
-            // break;
+int chek_titel(char *line, char *print){
+    
+    int match_found = 0;
+    while(match_found < 3){
+        printf("%s", print);
+        fgets(line, sizeof(line), stdin);
+
+        for(int i = 0; i < num_notes; i++){
+            if(strcmp(notes[i].title, line) == 0){
+                printf("Запис із таким заголовком існує\n");
+                match_found++;
+            }
         }
     }
-    return 0;
+    return match_found;
 }
 
 
@@ -95,14 +96,18 @@ void add_note(){
     }
 
     struct note new_note;
-
-    printf("Введіть заголовок: ");
-    fgets(new_note.title, sizeof(new_note.title), stdin);
+    char new_title[MAX_TITLE_SYMBOLS];
+    char *print = "Введіть заголовок: ";
 
     //XXX Could be simplified to if (check_title(...))
-    int INT_chek = chek_titel(new_note.title);
-    if(INT_chek == 1)
-        return add_note();
+
+    if(chek_titel(new_title, print) > 0){
+        sleep(1);
+        return;
+    } else
+        strcpy(new_note.title, new_title);
+
+
 
 
     printf("Введіть текст запису: ");
@@ -119,21 +124,9 @@ void add_note(){
         return;
     }
 
-
-    // struct tm tm;
-    // memset(&note, 0, sizeof(struct tm));
-    // new_note.due_time->tm_hour;
     new_note.due_time.tm_mday = day;
     new_note.due_time.tm_mon = month - 1;
     new_note.due_time.tm_year = year - 1900;
-	//XXX No need to zero it. It is not used currently, so it does not matter.
-    new_note.due_time.tm_hour = 0;
-    new_note.due_time.tm_min = 0;
-    new_note.due_time.tm_sec = 0;
-    
-    
-    // new_note.due_date = mktime(&tm);
-
 
     notes[num_notes] = new_note;
     num_notes++;
@@ -141,25 +134,8 @@ void add_note(){
 }
 
 
-// time_t time_now(){
-//     const time_t current_time = time(NULL);
-//     struct tm *local_time = localtime(&current_time);
-//     // local_time->tm_hour = 0;
-//     // local_time->tm_min = 0;
-//     // local_time->tm_sec = 0;
-//     // struct tm tm;
-//     // tm.tm_mday = local_time->tm_mday;
-//     // tm.tm_mon = local_time->tm_mon;
-//     // tm.tm_year = local_time->tm_year;
-//     // tm.tm_hour = 0;
-//     // tm.tm_min = 0;
-//     // tm.tm_sec = 0;
-
-//     return mktime(local_time);
-// }
-
 void show_noteToday(){
-	//XXX: Could be simplyfied. localtime(NULL);
+	//XXX: Could be simplified. localtime(NULL);
     time_t current_time = time(NULL);
     struct tm *local_time = localtime(&current_time);
     int count = 1;
@@ -192,12 +168,6 @@ void show_plansCertainDay(){
     tm.tm_mday = day;
     tm.tm_mon = mon - 1;
     tm.tm_year = year - 1900;
-    //XXX Redundand zeroing
-    tm.tm_hour = 0;
-    tm.tm_min = 0;
-    tm.tm_sec = 0;
-
-    // time_t time_second = mktime(&tm);
 
     for(int i = 0; i < num_notes; i++){
         if(notes[i].due_time.tm_year == tm.tm_year 
@@ -213,27 +183,24 @@ void show_plansCertainDay(){
 
 void change_notes(){
 	//XXX Consider number here. Title is not userfrienldy
-    printf("Введіть заголовок який хочете змінити\n");
     int flag = 0;
     char name_changeNote[50];
+    
+    printf("Введіть заголовок який хочете змінити\n");
     fgets(name_changeNote, sizeof(name_changeNote), stdin);
-    // scanf("%s", name_changeNote);
-
 
     for(int i = 0; i < num_notes; i++){
 	    //XXX Be careful! Not case sensitive
         if(strcmp(notes[i].title, name_changeNote) == 0){
-            printf("Введіть новий заголовок: ");
-            fgets(notes[i].title, sizeof(notes->title), stdin);
+            char *print = "Введіть новий заголовок: ";
+            char tmpTitle[MAX_TITLE_SYMBOLS];
 
+            if(chek_titel(tmpTitle, print) > 0){
+                sleep(1);
+                return;
+            } else
+                strcpy(notes[i].title, tmpTitle);
 
-
-            int INT_chek = chek_titel(notes[i].title);
-            if(INT_chek == 1){
-                printf("Введіть новий заголовок: ");
-                fgets(notes[i].title, sizeof(notes->title), stdin);
-                // break;
-            }
 
             printf("Введіть текст: ");
             fgets(notes[i].body, sizeof(notes->body), stdin);
@@ -278,21 +245,21 @@ void deleteNote(){
 }
 
 //XXX Comment out unused code. #if 0 for example
-void delete_note(){
-    printf("Введіть назву нотатки яку хочете видалити: ");
-    char name_delete_note[50];
-    fgets(name_delete_note, sizeof(name_delete_note), stdin);
-    for(int i = 0; i < num_notes; i++){
-        if(strcmp(notes[i].title, name_delete_note) == 0){
-            for(int j = i; j < num_notes - 1; j++){
-                printf("%d ", num_notes);
-                notes[j] = notes[j+1];
-            }
-            num_notes--;
-        }
-    }
-    printf("Нотатка видалена");
-}
+// void delete_note(){
+//     printf("Введіть назву нотатки яку хочете видалити: ");
+//     char name_delete_note[50];
+//     fgets(name_delete_note, sizeof(name_delete_note), stdin);
+//     for(int i = 0; i < num_notes; i++){
+//         if(strcmp(notes[i].title, name_delete_note) == 0){
+//             for(int j = i; j < num_notes - 1; j++){
+//                 printf("%d ", num_notes);
+//                 notes[j] = notes[j+1];
+//             }
+//             num_notes--;
+//         }
+//     }
+//     printf("Нотатка видалена");
+// }
 
 
 void show_note(){
@@ -300,10 +267,6 @@ void show_note(){
         printf("*****\n");
         printf("Заголовок: %s", notes[i].title);
         printf("Сам текст: %s", notes[i].body);
-        // struct tm *local_time = localtime(&notes[i].due_time);
-
-        // char data_time[50];
-        // strftime(data_time, sizeof(data_time), "Date: %d.%m.%Y\n", local_time);
         printf("Date: %02d.%02d.%04d\n",  notes[i].due_time.tm_mday,
                                     notes[i].due_time.tm_mon + 1,
                                     notes[i].due_time.tm_year + 1900);
@@ -320,8 +283,6 @@ void getCurrentDateTime(){
     char date_time[100];
     strftime(date_time, sizeof(date_time), "Date: %Y-%m-%d\nTime: %H:%M:%S\n", local_time);
 
-    // printf("Current date and time: %s", asctime(local_time));
-    // printf("%ld", current_time);
     printf("%s", date_time);
 }
 
@@ -330,9 +291,6 @@ void getCurrentDateTime(){
 int main(){
     int choice;
     int chek_num_notes = num_notes;
-    // time_t current_time = time_now();
-    // printf("%ld", current_time);
-
 
     while(1){
         load_notes();
