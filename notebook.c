@@ -1,18 +1,18 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <unistd.h>
+#include "database.h"
+// #include <time.h>
+// #include <unistd.h>
 
 #define MAX_NOTES 100
-#define MAX_TITLE_SYMBOLS 50
+#define MAX_TITLdue_timeE_SYMBOLS 50
 #define MAX_BODY_SYMBOLS 1000
-#define NAME_FILE "notes.txt"
-
+#define DB_DIR "database/"
+#define NAME_FILE DB_DIR"notes.txt"
+#define FILE_NAME 50
 
 struct note{
     char title[MAX_TITLE_SYMBOLS];
     char body[MAX_BODY_SYMBOLS];
+    // char file_name[FILE_NAME];
     struct tm due_time;
 };
 
@@ -21,97 +21,71 @@ struct note notes[MAX_NOTES];
 int num_notes = 0;
 
 
-void save_notes(int chek_num_notes){
-    FILE  *fp = fopen(NAME_FILE, "w+");
-    if(fp == NULL){
-        printf("Error\n");
-        return;
-    }
+// void save_notes(char *filename, struct note note){
+//     FILE  *fp = fopen(filename, "a+");
+//     if(fp == NULL){
+//         perror("Error opening file");
+//         exit(0);
+//     }
 
-    for(int i = 0; i < num_notes; i++){
-        fputs(notes[i].title, fp);
-        fputs(notes[i].body, fp);
+//     // for(int i = 0; i < num_notes; i++){
+//         fputs(note.title, fp);
+//         fputs(note.body, fp);
 
-        char date_time_str[50];
-        strftime(date_time_str, sizeof(date_time_str), "%d.%m.%Y", &notes[i].due_time);
-        fputs(date_time_str, fp);
-        fputs("\n", fp);
-    }
-    fclose(fp);
-}
-
-
-void load_notes(){
-    FILE *fp = fopen(NAME_FILE, "r");
-    if(fp == NULL){
-        printf("Error\n");
-        return;
-    }
+//         char date_time_str[50];
+//         strftime(date_time_str, sizeof(date_time_str), "%d.%m.%Y", &note.due_time);
+//         fputs(date_time_str, fp);
+//         fputs("\n", fp);
+//     // } num_notes
+//     fclose(fp);
+// }
 
 
-    num_notes = 0;
-
-    int day, mon, year;
-    char line_note[1050];
-    while(fgets(line_note, sizeof(line_note), fp)){
-        strcpy(notes[num_notes].title, line_note);
-
-        fgets(line_note, sizeof(line_note), fp);
-        strcpy(notes[num_notes].body, line_note);
-
-        fgets(line_note, sizeof(line_note), fp);
-        sscanf(line_note, "%d.%d.%d", &day, &mon, &year);
-        notes[num_notes].due_time.tm_mday = day;
-        notes[num_notes].due_time.tm_mon = mon - 1;
-        notes[num_notes].due_time.tm_year = year - 1900;
-
-        num_notes++;
-    }
-    fclose(fp);
-}
+// void load_notes(char *filename){
+//     FILE *fp = fopen(filename, "r");
+//     if(fp == NULL){
+//         printf("Error\n");
+//         return;
+//     }
 
 
-int chek_titel(char *line, char *print){
-    
-    int match_found = 0;
-    while(match_found < 3){
-        printf("%s", print);
-        fgets(line, sizeof(line), stdin);
+//     num_notes = 0;
+//     s_db_entry *notes = get_notes_by_range();
+//     while (notes->next) {
+//         printf("%s %s %s");
+//     }
+    // int day, mon, year;
+    // char line_note[1050];
+    // while(fgets(line_note, sizeof(line_note), fp)){
+    //     strcpy(notes[num_notes].title, line_note);
 
-        for(int i = 0; i < num_notes; i++){
-            if(strcmp(notes[i].title, line) == 0){
-                printf("Запис із таким заголовком існує\n");
-                match_found++;
-            }
-        }
-    }
-    return match_found;
-}
+    //     fgets(line_note, sizeof(line_note), fp);
+    //     strcpy(notes[num_notes].body, line_note);
+
+    //     fgets(line_note, sizeof(line_note), fp);
+    //     sscanf(line_note, "%d.%d.%d", &day, &mon, &year);
+    //     notes[num_notes].due_time.tm_mday = day;
+    //     notes[num_notes].due_time.tm_mon = mon - 1;
+    //     notes[num_notes].due_time.tm_year = year - 1900;
+
+    //     num_notes++;
+    // }
+    // fclose(fp);
+// }
+
+
 
 
 void add_note(){
-    if(num_notes >= MAX_NOTES){
-        printf("Досягнуто максимальну кількість записів\n");
-        return;
-    }
 
-    struct note new_note;
-    char new_title[MAX_TITLE_SYMBOLS];
-    char *print = "Введіть заголовок: ";
+    s_db_entry *new_note = malloc(sizeof(s_db_entry));
 
-    //XXX Could be simplified to if (check_title(...))
-
-    if(chek_titel(new_title, print) > 0){
-        sleep(1);
-        return;
-    } else
-        strcpy(new_note.title, new_title);
-
-
+    printf("Введіть заголовок: ");
+    fgets(new_note->title, sizeof(new_note->title), stdin);
 
 
     printf("Введіть текст запису: ");
-    fgets(new_note.body, sizeof(new_note.body), stdin);
+    fgets(new_note->body, sizeof(new_note->body), stdin);
 
     printf("Введіть дату та час, коли потрібно нагадати (у форматі \"dd.mm.yyyy\"): ");
     char input[50];
@@ -119,17 +93,18 @@ void add_note(){
 
     int day, month, year;
 
-    if (sscanf(input, "%d.%d.%d", &day, &month, &year) != 3) {
+    if (sscanf(input, "%02d.%02d.%04d", &day, &month, &year) != 3) {
         printf("Помилка введення дати. Спробуйте ще раз.\n");
         return;
     }
 
-    new_note.due_time.tm_mday = day;
-    new_note.due_time.tm_mon = month - 1;
-    new_note.due_time.tm_year = year - 1900;
+    new_note->due_time.tm_mday = day;
+    new_note->due_time.tm_mon = month - 1;
+    new_note->due_time.tm_year = year - 1900;
 
-    notes[num_notes] = new_note;
-    num_notes++;
+    store_note(new_note);
+
+    free(new_note);
     printf("Запис додано!\n");
 }
 
@@ -151,6 +126,7 @@ void show_noteToday(){
     }    
 }
 
+
 void show_plansCertainDay(){
     printf("Введіть дату (у форматі \"dd.mm.yyyy\"): ");
 
@@ -162,6 +138,11 @@ void show_plansCertainDay(){
     if(sscanf(input, "%d.%d.%d", &day, &mon, &year) != 3)
         printf("Помилка введення дати. Спробуйте ще раз.\n");
     
+    char filename[20];
+    sprintf(filename, "%02d %d", mon, year);
+    printf("%s", filename);
+
+    // load_notes(filename);
     struct tm tm;
     memset(&tm, 0, sizeof(struct tm));
 
@@ -181,10 +162,11 @@ void show_plansCertainDay(){
     //XXX Consider stopping program while user examining notes for the certain day
 }
 
+
 void change_notes(){
 	//XXX Consider number here. Title is not userfrienldy
     int flag = 0;
-    char name_changeNote[50];
+    char name_changeNote[MAX_TITLE_SYMBOLS];
     
     printf("Введіть заголовок який хочете змінити\n");
     fgets(name_changeNote, sizeof(name_changeNote), stdin);
@@ -192,14 +174,16 @@ void change_notes(){
     for(int i = 0; i < num_notes; i++){
 	    //XXX Be careful! Not case sensitive
         if(strcmp(notes[i].title, name_changeNote) == 0){
-            char *print = "Введіть новий заголовок: ";
             char tmpTitle[MAX_TITLE_SYMBOLS];
+            printf("Введіть новий заголовок: ");
+            fgets(tmpTitle, sizeof(tmpTitle), stdin);
 
-            if(chek_titel(tmpTitle, print) > 0){
-                sleep(1);
-                return;
-            } else
-                strcpy(notes[i].title, tmpTitle);
+            // if(chek_titel(name_changeNote) > 0){
+            //     printf("Перевищено кількість спроб");
+            //     sleep(1);
+            //     return;
+            // } else
+            //     strcpy(notes[i].title, name_changeNote);
 
 
             printf("Введіть текст: ");
@@ -229,6 +213,7 @@ void change_notes(){
     if(flag == 0)
         printf("Запис не знайдено!\n");
 }
+
 
 void deleteNote(){
     printf("Введіть назву нотатки яку хочете видалити: ");
@@ -280,6 +265,7 @@ void getCurrentDateTime(){
     const time_t current_time = time(NULL);
     struct tm *local_time = localtime(&current_time);
 
+
     char date_time[100];
     strftime(date_time, sizeof(date_time), "Date: %Y-%m-%d\nTime: %H:%M:%S\n", local_time);
 
@@ -287,52 +273,76 @@ void getCurrentDateTime(){
 }
 
 
+void display(){
+    printf("Оберіть дію:\n");
+    printf("1: Додати нагадування\n");
+    printf("2: Переглянути нагадування\n");
+    printf("3: Показати плани на певний день\n");
+    printf("4: Змінити нагадування\n");
+    printf("5: Видалити нагадування\n");
+    printf("6: Вийти!\n");
+}
+
+
+void make_print(){
+    const time_t curr_time = time(NULL);
+    struct tm *local_time = localtime(&curr_time);
+    int choice;
+    display();
+    scanf("%d%*c", &choice);
+    switch(choice){
+        case 1:
+            add_note();
+            printf("\n");
+            break;
+        case 2:
+            // show_note();
+            init_db(local_time);
+            printf("\n");
+            break;
+        case 3:
+            show_plansCertainDay();
+            printf("\n");
+            break;
+        case 4:
+            change_notes();
+            printf("\n");
+            break;
+        case 5:
+            deleteNote();
+            break;
+        case 6:
+            printf("Good bay!\n");
+            exit(0);
+        default:
+            printf("ERRor");
+    }
+}
+
 
 int main(){
-    int choice;
-    int chek_num_notes = num_notes;
+    // int chek_num_notes = num_notes;
+
+    //If DIR not exist - ERROR and exit
+    //АБО!!!!
+    //mkdir(DB_DIR)
 
     while(1){
-        load_notes();
+        // load_notes();
         getCurrentDateTime();
         show_noteToday();
-        printf("Оберіть дію:\n");
-        printf("1: Додати нагадування\n");
-        printf("2: Переглянути нагадування\n");
-        printf("3: Показати плани на певний день\n");
-        printf("4: Змінити нагадування\n");
-        printf("5: Видалити нагадування\n");
-        printf("6: Вийти!\n");
-        scanf("%d%*c", &choice);
-        switch(choice){
-            case 1:
-                add_note();
-                printf("\n");
-                break;
-            case 2:
-                show_note();
-                if(num_notes == 0)
-                    printf("Empty\n");
-                printf("\n");
-                break;
-            case 3:
-                show_plansCertainDay();
-                printf("\n");
-                break;
-            case 4:
-                change_notes();
-                printf("\n");
-                break;
-            case 5:
-                deleteNote();
-                break;
-            case 6:
-                printf("Good bay!\n");
-                exit(0);
-            default:
-                printf("ERRor");
+        make_print();
+        // save_notes();
+
+        while(near_notes != NULL){
+            printf("%s\n", near_notes->title);
+            printf("%s\n", near_notes->body);
+            printf("%02d.%02d.%04d\n", near_notes->due_time.tm_mday,
+                                    near_notes->due_time.tm_mon,
+                                    near_notes->due_time.tm_year);
+
+            near_notes = near_notes->next;
         }
-        save_notes(chek_num_notes);
     }
 
     return 0;
