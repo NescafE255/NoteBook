@@ -17,22 +17,26 @@ void init_db(struct tm *local_time)
 
     struct tm strart_date = *local_time;
     strart_date.tm_mday -= 5;
+    //it worth to set minutes and hours to 0 here. You don't need to cut the day, right?
     mktime(&strart_date);
 
     struct tm end_date = *local_time;
     end_date.tm_mday += 15;
+    //it worth to set minutes and hours to 0 here. You don't need to cut the day, right?
     mktime(&end_date);
 
+    //MAGIC NUMBER! Consider adding some DEFINE for filesize or something
     char filename[50];
     for(int month = strart_date.tm_mon; month <= end_date.tm_mon; month++){
         for(int year = strart_date.tm_year; year <= end_date.tm_year; year++){
             sprintf(filename, "%s%02d %d", DB_DIR, month + 1, year + 1900);
 
-            // printf("%s\n", filename);
+            printf("%s\n", filename);
             FILE *fp = fopen(filename, "r");
             if(fp == NULL){
                 perror("Error opening file");
-                exit(1);
+		//Why exit there? Unintended exit!
+                continue;
             }
 
             fseek(fp, 0, SEEK_END);
@@ -42,12 +46,16 @@ void init_db(struct tm *local_time)
                 // break;
             } else{
 
+		//rewind? What do you expect from this line of code?
                 fseek(fp, 0, SEEK_SET);
                 int day, mon, year;
                 // char line[1050];
                 while(!feof(fp)){
 
-                    s_db_entry *note = malloc(sizeof(s_db_entry)); 
+			printf("\033[0;31m Not end of file\033[0m\n");
+
+                    s_db_entry *note = malloc(sizeof(s_db_entry));
+		    //Why do you malloc tmp here?
                     s_db_entry *tmp = malloc(sizeof(s_db_entry));
                     
                     fgets(note->title, MAX_TITLE_SYMBOLS, fp);
@@ -56,6 +64,7 @@ void init_db(struct tm *local_time)
                     
                     fgets(note->body, MAX_BODY_SYMBOLS, fp);
                     strtok(note->body, "\n");
+		    printf("body: %s (%lu)\n", note->body, strlen(note->body));
                     // strcpy(note->body, line);
 
                     char data_time_str[50];
@@ -77,6 +86,7 @@ void init_db(struct tm *local_time)
                     if(near_notes == NULL){
                         near_notes = note;
                     } else {
+			//memory leak there! You malloced tmp and did not free it. Probably, tmp = malloc is redudndant
                         tmp = near_notes;
                         while(tmp->next != NULL){
                             tmp = tmp->next;
@@ -100,6 +110,7 @@ void init_db(struct tm *local_time)
 void store_note(s_db_entry *note)
 {
     char filename[30];
+    //%s%02d_%d would be better. Spaces in file_name is evel
     sprintf(filename, "%s%02d %d", DB_DIR, note->due_time.tm_mon + 1, note->due_time.tm_year + 1900);
 
     FILE *fp = fopen(filename, "a");
@@ -114,7 +125,8 @@ void store_note(s_db_entry *note)
     char date_time_str[50];
     strftime(date_time_str, sizeof(date_time_str), "%d.%m.%Y", &note->due_time);
     fputs(date_time_str, fp);
-    // fputs("\n", fp);
+    //Bring back this line. It is needed for us
+    fputs("\n", fp);
     fflush(fp);
     fclose(fp);
 

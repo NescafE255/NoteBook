@@ -109,6 +109,7 @@ void add_note(){
 }
 
 
+//Move logic or entire function to DB
 void show_noteToday(){
 	//XXX: Could be simplified. localtime(NULL);
     time_t current_time = time(NULL);
@@ -127,6 +128,7 @@ void show_noteToday(){
 }
 
 
+//Logic if this function should be passed to DB.
 void show_plansCertainDay(){
     printf("Введіть дату (у форматі \"dd.mm.yyyy\"): ");
 
@@ -172,7 +174,7 @@ void change_notes(){
     fgets(name_changeNote, sizeof(name_changeNote), stdin);
 
     for(int i = 0; i < num_notes; i++){
-	    //XXX Be careful! Not case sensitive
+	    //XXX Be careful! Case sensitive! consider using strcasecmp
         if(strcmp(notes[i].title, name_changeNote) == 0){
             char tmpTitle[MAX_TITLE_SYMBOLS];
             printf("Введіть новий заголовок: ");
@@ -201,6 +203,7 @@ void change_notes(){
                 break;
             }
 
+	    //Move note change functionality to DB
             notes[i].due_time.tm_mday = day;
             notes[i].due_time.tm_mon = mon - 1;
             notes[i].due_time.tm_year = year - 1900;
@@ -214,7 +217,7 @@ void change_notes(){
         printf("Запис не знайдено!\n");
 }
 
-
+//Use DB for this purpose
 void deleteNote(){
     printf("Введіть назву нотатки яку хочете видалити: ");
     char name_delete_note[50];
@@ -296,6 +299,7 @@ void make_print(){
             printf("\n");
             break;
         case 2:
+	    //init_db should be called before main loop. It is non-sence to do such
             // show_note();
             init_db(local_time);
             printf("\n");
@@ -334,6 +338,7 @@ int main(){
         make_print();
         // save_notes();
 
+	//Not good. It would be better to make a DB call (function) for such notes.
         while(near_notes != NULL){
             printf("%s\n", near_notes->title);
             printf("%s\n", near_notes->body);

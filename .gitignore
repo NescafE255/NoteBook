@@ -1,0 +1,7 @@
+*.swp
+*.swn
+*.swo
+database/
+tags
+notes.txt
+a.out
