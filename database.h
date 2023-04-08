@@ -27,7 +27,7 @@ extern s_db_entry *near_notes, *buffer_notes;
 
 void init_db(struct tm *local_time);
 void store_note(s_db_entry *note);
-void add_hash_file(s_db_entry *note);
+
 
 char *hash_md5(char *filename);
 s_db_entry *get_note_by_date(struct tm *time);

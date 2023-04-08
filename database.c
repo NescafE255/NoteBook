@@ -109,12 +109,6 @@ void init_db(struct tm *local_time)
     }
 }
 
-void add_hash_file(s_db_entry *note){
-    char filename[30];
-    sprintf(filename, "%s%02d_%d" ,DB_DIR, note->due_time.tm_mon + 1, note->due_time.tm_year + 1900);
-
-
-}
 
 
 void store_note(s_db_entry *note)
