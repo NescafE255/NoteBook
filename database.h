@@ -4,6 +4,9 @@
 #include <errno.h>
 #include <time.h>
 #include <dirent.h>
+#include <openssl/md5.h>
+#include <openssl/evp.h>
+
 
 
 #define DB_DIR "database/"
@@ -22,10 +25,11 @@ typedef struct db_entry {
 
 extern s_db_entry *near_notes, *buffer_notes;
 
-
 void init_db(struct tm *local_time);
 void store_note(s_db_entry *note);
+void add_hash_file(s_db_entry *note);
 
+char *hash_md5(char *filename);
 s_db_entry *get_note_by_date(struct tm *time);
 s_db_entry *get_note_by_title(const char *title);
 s_db_entry *get_note_by_range(struct tm *time_low, struct tm *time_high);

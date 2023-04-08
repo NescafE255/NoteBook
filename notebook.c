@@ -103,6 +103,7 @@ void add_note(){
     new_note->due_time.tm_year = year - 1900;
 
     store_note(new_note);
+    add_hash_file(new_note);
 
     free(new_note);
     printf("Запис додано!\n");
@@ -302,7 +303,7 @@ void make_print(){
 	    //init_db should be called before main loop. It is non-sence to do such
             // show_note();
             init_db(local_time);
-            printf("\n");
+            // printf("\n");
             break;
         case 3:
             show_plansCertainDay();
@@ -335,19 +336,20 @@ int main(){
         // load_notes();
         getCurrentDateTime();
         show_noteToday();
+
         make_print();
         // save_notes();
 
 	//Not good. It would be better to make a DB call (function) for such notes.
-        while(near_notes != NULL){
-            printf("%s\n", near_notes->title);
-            printf("%s\n", near_notes->body);
-            printf("%02d.%02d.%04d\n", near_notes->due_time.tm_mday,
-                                    near_notes->due_time.tm_mon,
-                                    near_notes->due_time.tm_year);
+        // while(near_notes != NULL){
+        //     printf("%s\n", near_notes->title);
+        //     printf("%s\n", near_notes->body);
+        //     printf("%02d.%02d.%04d\n", near_notes->due_time.tm_mday,
+        //                             near_notes->due_time.tm_mon,
+        //                             near_notes->due_time.tm_year);
 
-            near_notes = near_notes->next;
-        }
+        //     near_notes = near_notes->next;
+        // }
     }
 
     return 0;
