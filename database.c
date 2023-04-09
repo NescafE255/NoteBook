@@ -4,6 +4,8 @@
 #define READ_BUF_SIZE 1024
 
 s_db_entry *near_notes = NULL;
+// char data_time_str[50];
+
 
 
 void init_db(struct tm *local_time)
@@ -31,7 +33,7 @@ void init_db(struct tm *local_time)
     char filename[50];
     for(int month = strart_date.tm_mon; month <= end_date.tm_mon; month++){
         for(int year = strart_date.tm_year; year <= end_date.tm_year; year++){
-            sprintf(filename, "%s%02d_%d", DB_DIR, month + 1, year + 1900);
+            sprintf(filename, "%s%02d_%d", DB_DIR, month, year);
             printf("%s\n", filename);
 
 
@@ -45,7 +47,7 @@ void init_db(struct tm *local_time)
 
             char info_hash[34];
             fgets(info_hash, sizeof(info_hash), fp);
-            if(strlen(info_hash) <= 0)
+            if(strlen(info_hash) < 33)
                 continue;
                 // printf("YEs");
             // strtok(info_hash, "\n");
@@ -76,7 +78,7 @@ void init_db(struct tm *local_time)
                 char data_time_str[50];
                 int day, mon, year;
                 fgets(data_time_str, sizeof(data_time_str), fp);
-                printf("Data init_db: %s", data_time_str);
+                // printf("Data init_db: %s", data_time_str);
                 // strtok(data_time_str, "\n");
                 sscanf(data_time_str, "%02d.%02d.%04d", &day, &mon, &year);
 
@@ -107,7 +109,7 @@ void init_db(struct tm *local_time)
             // s_db_entry *temp = near_notes;
 
             if(near_notes == NULL)
-                printf("NULL");
+                printf("NULL\n");
 
             while(near_notes){
                 printf("<<<<%s>>>>!\n", near_notes->title);
@@ -121,9 +123,9 @@ void init_db(struct tm *local_time)
             printf("HASH: %s", info_hash);
             printf("HASH OUT: %s", out);
             if(strcmp(out, info_hash) == 0)
-                printf("***Yesss***");
+                printf("***Yesss ***");
 
-            out[0] = 0;
+            // out[0] = 0;
             fclose(fp);
         }
 
@@ -138,18 +140,24 @@ void store_note(s_db_entry *note)
     FILE *fp;
     char filename[30];
     //%s%02d_%d would be better. Spaces in file_name is evel
-    sprintf(filename, "%s%02d_%d", DB_DIR, note->due_time.tm_mon + 1, note->due_time.tm_year + 1900);
+    sprintf(filename, "%s%02d_%d", DB_DIR, note->due_time.tm_mon, note->due_time.tm_year);
 
+
+    fp = fopen(filename, "r+");
+     if(fp == NULL){
+        perror("Error opening file");
+        exit(0);
+    }
 
     char *out = hash_md5(near_notes);
-    // printf("%s", out);
+    printf("UPDATE hash %s", out);
 
     
-    fp = fopen(filename, "r+");
     rewind(fp);
-    if(strlen(out) > 0){
-        fputs(out, fp);
-    }
+    // printf("%ld", ftell(fp));
+    // if(strlen(out) > 0){
+    fputs(out, fp);
+    // }
     fclose(fp);
     OPENSSL_free(out);
     
@@ -172,14 +180,8 @@ void store_note(s_db_entry *note)
 
     fputs(note->title, fp);
     fputs(note->body, fp);
+    fprintf(fp, "%02d.%02d.%04d",  note->due_time.tm_mday, note->due_time.tm_mon, note->due_time.tm_year);
 
-    char date_time_str[50];
-    // note->due_time.tm_mon = 1;
-    // note->due_time.tm_year =- 1900;
-
-    strftime(date_time_str, sizeof(date_time_str), "%d.%m.%Y", &note->due_time);
-    fputs(date_time_str, fp);
-    printf("Data store_note %s", date_time_str);
     //Bring back this line. It is needed for us
     fputs("\n", fp);
     fclose(fp);
@@ -211,10 +213,8 @@ char *hash_md5(s_db_entry *note){
 
     tmp = note;
     while(tmp){
-        // tmp->due_time.tm_mon = 0;
-        // tmp->due_time.tm_year = 0;
-        strftime(date_time_str, sizeof(date_time_str), "%d.%m.%Y", &tmp->due_time);
-        printf("DATE in hash_md5: %s\n", date_time_str);
+        sprintf(date_time_str, "%02d.%02d.%04d", tmp->due_time.tm_mday, tmp->due_time.tm_mon, tmp->due_time.tm_year);
+        // printf("DATE in hash_md5: %s\n", date_time_str);
         bytes_read = snprintf(buf, MAX_TITLE_SYMBOLS + MAX_BODY_SYMBOLS + 11, "%s\n%s\n%s\n", tmp->title, tmp->body, date_time_str);
         EVP_DigestUpdate(mdctx, buf, bytes_read);
         tmp = tmp->next;
@@ -242,8 +242,17 @@ char *hash_md5(s_db_entry *note){
 
 
 
-// s_db_entry *get_note_by_date(struct tm *time)
+// s_db_entry *get_note_by_date(struct tm *local_time, struct tm *time)
 // {
+
+    
+
+//     char filename[50];
+//     sprintf(filename, DB_DIR, "%s%02d_%04d", DB_DIR, mon, year);
+
+//     FILE *fp = fopen(filename, "r");
+
+
 //     //IF time > localtime + 15 days  and buffer_notes contains data from another day
 //         //Store the day of date to buffer_notes
 // }

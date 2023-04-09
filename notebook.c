@@ -88,22 +88,29 @@ void add_note(){
     fgets(new_note->body, sizeof(new_note->body), stdin);
 
     printf("Введіть дату та час, коли потрібно нагадати (у форматі \"dd.mm.yyyy\"): ");
-    char input[50];
-    fgets(input, sizeof(input), stdin);
+    // char input[50];
+    // fgets(input, sizeof(input), stdin);
 
-    int day, month, year;
+    // int day, month, year;
 
-    if (sscanf(input, "%02d.%02d.%04d", &day, &month, &year) != 3) {
-        printf("Помилка введення дати. Спробуйте ще раз.\n");
-        return;
-    }
+    // if (sscanf(input, "%02d.%02d.%04d", &day, &month, &year) != 3) {
+    //     printf("Помилка введення дати. Спробуйте ще раз.\n");
+    //     return;
+    // }
 
-    new_note->due_time.tm_mday = day;
-    new_note->due_time.tm_mon = month - 1;
-    new_note->due_time.tm_year = year - 1900;
+    scanf("%d.%d.%d", &new_note->due_time.tm_mday, &new_note->due_time.tm_mon, &new_note->due_time.tm_year);
+    // strtok(new_note->title, "\n");
+    // strtok(new_note->body, "\n");
+    // new_note->due_time.tm_mday = day;
+    // new_note->due_time.tm_mon = month;
+    // new_note->due_time.tm_year = year;
+    // printf("%s\n", new_note->title);
+    // printf("%s\n", new_note->body);
+    // printf("%02d%02d.%04d", new_note->due_time.tm_mday, new_note->due_time.tm_mon, new_note->due_time.tm_year);
 
     store_note(new_note);
     // add_hash_file(new_note);
+    
 
     free(new_note);
     printf("Запис додано!\n");
@@ -290,7 +297,12 @@ void display(){
 
 void make_print(){
     const time_t curr_time = time(NULL);
-    struct tm *local_time = localtime(&curr_time);
+
+    struct tm *local_time;
+    local_time = localtime(&curr_time);
+    local_time->tm_mon += 1;
+    local_time->tm_year += 1900;
+    // printf("%02d.%04d\n", local_time->tm_mon, local_time->tm_year);
     int choice;
     display();
     scanf("%d%*c", &choice);
