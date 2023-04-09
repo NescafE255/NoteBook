@@ -34,44 +34,37 @@ void init_db(struct tm *local_time)
             sprintf(filename, "%s%02d_%d", DB_DIR, month + 1, year + 1900);
             printf("%s\n", filename);
 
-            char *hash_key = hash_md5(filename);
-            char hash_key_file[READ_BUF_SIZE];
 
             FILE *fp = fopen(filename, "r");
             if(fp == NULL){
                 perror("Error opening file");
-		//Why exit there? Unintended exit!
-                // break;
+                exit(0);
             }
 
 
-            fread(hash_key_file, 1, READ_BUF_SIZE, fp);
-            // strtok(hash_key_file, "\n");
 
-            printf("Press key: %s\n", hash_key);
-            printf("Press key file: %s\n", hash_key_file);
-
-            if(strcmp(hash_key, hash_key_file) == 0){
-                printf("Yes\n");
-            }
-
-
-            // fseek(fp, pos, SEEK_CUR);
-            int day, mon, year;
+            char info_hash[34];
+            fgets(info_hash, sizeof(info_hash), fp);
+            if(strlen(info_hash) <= 0)
+                continue;
+                // printf("YEs");
+            // strtok(info_hash, "\n");
+            // info_hash[0] = 0;
+            
             char line[MAX_BODY_SYMBOLS];
-            while(fgets(line, MAX_TITLE_SYMBOLS, fp)){
-                
-                
+            while(fgets(line, MAX_TITLE_SYMBOLS, fp) != NULL){
                 
                 s_db_entry *note = malloc(sizeof(s_db_entry));
+
                 // fgets(line, MAX_TITLE_SYMBOLS, fp);
-                // printf("%s\n", line);
+                // printf("TITLE: %s", line);
                 strtok(line, "\n");
                 strcpy(note->title, line);
 
 
 
                 fgets(line, MAX_BODY_SYMBOLS, fp);
+                // printf("BODY: %s", line);
                 strtok(line, "\n");
                 strcpy(note->body, line);
                 
@@ -81,7 +74,10 @@ void init_db(struct tm *local_time)
                 
 
                 char data_time_str[50];
+                int day, mon, year;
                 fgets(data_time_str, sizeof(data_time_str), fp);
+                printf("Data init_db: %s", data_time_str);
+                // strtok(data_time_str, "\n");
                 sscanf(data_time_str, "%02d.%02d.%04d", &day, &mon, &year);
 
                 note->due_time.tm_mday = day;
@@ -100,9 +96,34 @@ void init_db(struct tm *local_time)
                     tmp->next = note;
 
                 }
+                
+                
+
                 // free(note);
             }
 
+            char *out = hash_md5(near_notes);
+
+            // s_db_entry *temp = near_notes;
+
+            if(near_notes == NULL)
+                printf("NULL");
+
+            while(near_notes){
+                printf("<<<<%s>>>>!\n", near_notes->title);
+                printf("<<<<%s>>>>!\n", near_notes->body);
+                // strftime(date_time, sizeof(date_time), "%d.%m.%Y", &temp->due_time);
+                printf("<<<<<%d.%d.%d>>>>>!\n", near_notes->due_time.tm_mday, near_notes->due_time.tm_mon, near_notes->due_time.tm_year);
+                near_notes = near_notes->next;
+            }
+            near_notes = NULL;
+
+            printf("HASH: %s", info_hash);
+            printf("HASH OUT: %s", out);
+            if(strcmp(out, info_hash) == 0)
+                printf("***Yesss***");
+
+            out[0] = 0;
             fclose(fp);
         }
 
@@ -114,15 +135,27 @@ void init_db(struct tm *local_time)
 void store_note(s_db_entry *note)
 {
 
-
+    FILE *fp;
     char filename[30];
     //%s%02d_%d would be better. Spaces in file_name is evel
     sprintf(filename, "%s%02d_%d", DB_DIR, note->due_time.tm_mon + 1, note->due_time.tm_year + 1900);
 
-    // int count = strlen(out);
+
+    char *out = hash_md5(near_notes);
     // printf("%s", out);
 
-    FILE *fp = fopen(filename, "a");
+    
+    fp = fopen(filename, "r+");
+    rewind(fp);
+    if(strlen(out) > 0){
+        fputs(out, fp);
+    }
+    fclose(fp);
+    OPENSSL_free(out);
+    
+    
+    
+    fp = fopen(filename, "a");
     if(fp == NULL){
         perror("Error opening file");
         exit(0);
@@ -135,48 +168,36 @@ void store_note(s_db_entry *note)
         return;
     }
 
-    printf("%ld\n", ftell(fp));
-    if(ftell(fp) == 0){
-        fputs("hash\n", fp);
-        printf("LOL");
-    }
+    // printf("%s", out);
 
     fputs(note->title, fp);
     fputs(note->body, fp);
 
     char date_time_str[50];
+    // note->due_time.tm_mon = 1;
+    // note->due_time.tm_year =- 1900;
+
     strftime(date_time_str, sizeof(date_time_str), "%d.%m.%Y", &note->due_time);
     fputs(date_time_str, fp);
+    printf("Data store_note %s", date_time_str);
     //Bring back this line. It is needed for us
     fputs("\n", fp);
-    printf("%ld\n", ftell(fp));
     fclose(fp);
 
 
-    char *out = hash_md5(filename);
     
-    fp = fopen(filename, "r+");
-    rewind(fp);
-
-    if(strlen(out) > 0){
-        fputs(out, fp);
-    } else
-        printf("Error: Data not written to file - empty hash.\n");
-    // printf("%ld\n", ftell(fp));
-    // printf("%ld\n", ftell(fp));
-    fclose(fp);
-
-    OPENSSL_free(out);
+    
 
 }
 
 
-char *hash_md5(char *filename){
+char *hash_md5(s_db_entry *note){
 
     EVP_MD_CTX *mdctx;
-    FILE *file;
-    unsigned char buf[READ_BUF_SIZE];
+    char buf[MAX_TITLE_SYMBOLS + MAX_BODY_SYMBOLS + 11];
     size_t bytes_read;
+    s_db_entry *tmp;
+    
 
 
 
@@ -184,40 +205,36 @@ char *hash_md5(char *filename){
     mdctx = EVP_MD_CTX_new();
     EVP_DigestInit_ex(mdctx, EVP_md5(), NULL);
 
-    file = fopen(filename, "r");
-    if(file == NULL){
-        perror("Openong error file");
-        exit(1);
-    }
+  
+    char date_time_str[50];
 
-    // int pos;
-    // if((pos = fread(buf, 1, sizeof(buf), file)) > MAX_TITLE_SYMBOLS){
-    //     printf("Pos <%d>\n", pos);
-    //     printf("!!!%s\n", buf);
-    //     fseek(file, pos, SEEK_CUR);
-    // }
 
-    while((bytes_read = fread(buf, 1, sizeof(buf), file)) > 0){
-        // printf("%s", buf);
-        // printf("%ld", bytes_read);
+    tmp = note;
+    while(tmp){
+        // tmp->due_time.tm_mon = 0;
+        // tmp->due_time.tm_year = 0;
+        strftime(date_time_str, sizeof(date_time_str), "%d.%m.%Y", &tmp->due_time);
+        printf("DATE in hash_md5: %s\n", date_time_str);
+        bytes_read = snprintf(buf, MAX_TITLE_SYMBOLS + MAX_BODY_SYMBOLS + 11, "%s\n%s\n%s\n", tmp->title, tmp->body, date_time_str);
         EVP_DigestUpdate(mdctx, buf, bytes_read);
+        tmp = tmp->next;
     }
-        // printf("%s", buf);
-        // printf("%ld", bytes_read);
 
-    fclose(file);
 
-    unsigned char md5_sum[MD5_DIGEST_LENGTH];
-    unsigned int md5_sum_len = 0;
+    unsigned char hash_sum[MAX_TITLE_SYMBOLS + MAX_BODY_SYMBOLS + 11];
+    unsigned int hash_str_len = EVP_MD_size(EVP_md5());
 
-    EVP_DigestFinal_ex(mdctx, md5_sum, &md5_sum_len);
+    
+    char *hash_str = (char *)OPENSSL_malloc(hash_str_len * 2 + 1);
+
+    EVP_DigestFinal_ex(mdctx, hash_sum, &hash_str_len);
     EVP_MD_CTX_free(mdctx);
-    char *hash_str = (char *)OPENSSL_malloc(md5_sum_len * 2);
 
-    for(int i = 0; i < md5_sum_len; i++){
-        sprintf(&hash_str[i * 2], "%02x", md5_sum[i]);
-        // fprintf(file, "%d", hash_str[i]);
+    for(int i = 0; i < hash_str_len; i++){
+        sprintf(&hash_str[i * 2], "%02x", hash_sum[i]);
     }
+
+    hash_str[hash_str_len * 2] = '\n';
 
     return hash_str;
 }

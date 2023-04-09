@@ -103,7 +103,7 @@ void add_note(){
     new_note->due_time.tm_year = year - 1900;
 
     store_note(new_note);
-    add_hash_file(new_note);
+    // add_hash_file(new_note);
 
     free(new_note);
     printf("Запис додано!\n");
