@@ -9,7 +9,7 @@ s_db_entry *near_notes = NULL;
 
 
 
-
+//XXX LIST Consider moving actions with list to separate file (list.c + list.h for example)
 void dispalay_list(s_db_entry *note){
     s_db_entry *tmp = note;
     while(tmp){
@@ -35,12 +35,13 @@ void init_db(struct tm *local_time)
 
 
 
-
+    //XXX Potential crash here! Check if local_time is not NULL
     struct tm strart_date = *local_time;
     strart_date.tm_mday -= 5;
     //it worth to set minutes and hours to 0 here. You don't need to cut the day, right?
     mktime(&strart_date);
 
+    //XXX Potential crash here! Check if local_time is not NULL
     struct tm end_date = *local_time;
     end_date.tm_mday += 15;
     //it worth to set minutes and hours to 0 here. You don't need to cut the day, right?
@@ -50,6 +51,7 @@ void init_db(struct tm *local_time)
     char *out;
     //MAGIC NUMBER! Consider adding some DEFINE for filesize or something
     char filename[50];
+
     for(int month = strart_date.tm_mon; month <= end_date.tm_mon; month++){
         for(int year = strart_date.tm_year; year <= end_date.tm_year; year++){
             sprintf(filename, "%s%02d_%d", DB_DIR, month, year);
@@ -74,16 +76,33 @@ void init_db(struct tm *local_time)
             printf("HASH STORY %s\n", info_hash);
             printf("HASH NEW %s\n", out);
             if(strcmp(info_hash, out) == 0){
+                //XXX You already have a list here. No need to get it another time. 
                 near_notes = get_note_list(filename);
             }
             else {
                 printf("The file is corrupted\n");
+                //XXX Memory leak here! You have to free entire "buffer" list
                 continue;
             }
 
+            //XXX You already have a list in "buffer"
             dispalay_list(near_notes);
 
+            //XXX You have to remove the list in loop.
+            //XXX Something like this.
+            //XXX LIST consider moving this free to separate list file
+            /*
+                s_db_entry *tmp, *tmp_next;
+                tmp = near_notes;
+                while (tmp) {
+                    tmp_next = tmp->next;
+                    free(tmp);
+                    tmp = tmp_next;
+                }
+            */
             free(near_notes);
+            //XXX You don't need to remove the list here. near_notes have to be storred forever here.
+            //XXX If user will request an entry from this data range - return a value from this list without opening file
             free(buffer);
             OPENSSL_free(out);
             fclose(fp);
@@ -123,7 +142,7 @@ void store_note(s_db_entry *note)
 
 
 
-
+    //XXX You may use stat() to check file
     fp = fopen(filename, "a");
     if(fp == NULL){
         perror("Error opening file");
@@ -145,6 +164,7 @@ void store_note(s_db_entry *note)
         return;
     }
     else{
+        //XXX YOU DID NOT CLOSE PREVIOUS FP HERE!
         fp = fopen(filename, "r");
         if(fp == NULL){
             perror("Error opening file");
@@ -154,12 +174,15 @@ void store_note(s_db_entry *note)
         fgets(file_hash, 33, fp);
         buffer = get_note_list(filename);
         // memset(out, '\0', 33);
+        //XXX Maybe hash_md5 should not contain \n?
         out = hash_md5(buffer);
         strtok(file_hash, "\n");
         strtok(out, "\n");
         printf("%s\n", file_hash);
         printf("%s\n", out);
         if(strcmp(file_hash, out) != 0){
+            //XXX Use unlink() to clear file
+            //XXX You did not close previous fp!!!!!
             fp = fopen(filename, "w+");
             out = hash_md5(note);
             fputs(out, fp);
@@ -168,13 +191,16 @@ void store_note(s_db_entry *note)
             fclose(fp);
             return;
         } else {
+            //XXX You already have it! WHy do you get it another time?
             buffer = get_note_list(filename);
+            //XXX Hash is also there. WHy do you recalculate it?
             out = hash_md5(buffer);
             fp = fopen(filename, "w+");
             fputs(out, fp);
             if(buffer == NULL){
                 printf("BUFFER NULL");
             }
+            //XXX Why do you need to rewrite all the file? You may just fseek to the end to just save_file(note, fp)
             while(buffer){
                 printf("TITLE: %s\n", buffer->title);
                 printf("BODY: %s\n", buffer->body);
@@ -206,6 +232,7 @@ char *hash_md5(s_db_entry *note){
 
     EVP_MD_CTX *mdctx;
     char buf[MAX_TITLE_SYMBOLS + MAX_BODY_SYMBOLS + 11];
+    //XXX We do not read here. Change variable name to buf_size or something
     size_t bytes_read;
     s_db_entry *tmp;
     
@@ -226,6 +253,7 @@ char *hash_md5(s_db_entry *note){
     while(tmp){
         sprintf(date_time_str, "%02d.%02d.%04d", tmp->due_time.tm_mday, tmp->due_time.tm_mon, tmp->due_time.tm_year);
         // printf("DATE in hash_md5: %s\n", date_time_str);
+        //XXX Consider removing \n from line below
         bytes_read = snprintf(buf, MAX_TITLE_SYMBOLS + MAX_BODY_SYMBOLS + 11, "%s\n%s\n%s\n", tmp->title, tmp->body, date_time_str);
         EVP_DigestUpdate(mdctx, buf, bytes_read);
         tmp = tmp->next;
@@ -259,6 +287,7 @@ s_db_entry *get_note_list(char *filename){
 
 
     s_db_entry *buffer_notes = NULL;
+
     // char *hash_str = NULL;
     fseek(fp, 33, SEEK_SET);
     // printf("POS %ld\n", ftell(fp));
@@ -284,6 +313,7 @@ s_db_entry *get_note_list(char *filename){
         note->due_time.tm_year = year;
         note->next = NULL;
 
+        //XXX LIST Consider moving actions with list to separate file
         if(buffer_notes == NULL){
             buffer_notes = note;
         } else {
