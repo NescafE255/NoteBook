@@ -21,61 +21,6 @@ struct note notes[MAX_NOTES];
 int num_notes = 0;
 
 
-// void save_notes(char *filename, struct note note){
-//     FILE  *fp = fopen(filename, "a+");
-//     if(fp == NULL){
-//         perror("Error opening file");
-//         exit(0);
-//     }
-
-//     // for(int i = 0; i < num_notes; i++){
-//         fputs(note.title, fp);
-//         fputs(note.body, fp);
-
-//         char date_time_str[50];
-//         strftime(date_time_str, sizeof(date_time_str), "%d.%m.%Y", &note.due_time);
-//         fputs(date_time_str, fp);
-//         fputs("\n", fp);
-//     // } num_notes
-//     fclose(fp);
-// }
-
-
-// void load_notes(char *filename){
-//     FILE *fp = fopen(filename, "r");
-//     if(fp == NULL){
-//         printf("Error\n");
-//         return;
-//     }
-
-
-//     num_notes = 0;
-//     s_db_entry *notes = get_notes_by_range();
-//     while (notes->next) {
-//         printf("%s %s %s");
-//     }
-    // int day, mon, year;
-    // char line_note[1050];
-    // while(fgets(line_note, sizeof(line_note), fp)){
-    //     strcpy(notes[num_notes].title, line_note);
-
-    //     fgets(line_note, sizeof(line_note), fp);
-    //     strcpy(notes[num_notes].body, line_note);
-
-    //     fgets(line_note, sizeof(line_note), fp);
-    //     sscanf(line_note, "%d.%d.%d", &day, &mon, &year);
-    //     notes[num_notes].due_time.tm_mday = day;
-    //     notes[num_notes].due_time.tm_mon = mon - 1;
-    //     notes[num_notes].due_time.tm_year = year - 1900;
-
-    //     num_notes++;
-    // }
-    // fclose(fp);
-// }
-
-
-
-
 void add_note(){
 
     s_db_entry *new_note = malloc(sizeof(s_db_entry));
@@ -98,7 +43,26 @@ void add_note(){
     //     return;
     // }
 
-    scanf("%d.%d.%d", &new_note->due_time.tm_mday, &new_note->due_time.tm_mon, &new_note->due_time.tm_year);
+
+    if(scanf("%02d.%02d.%04d", &new_note->due_time.tm_mday, &new_note->due_time.tm_mon, &new_note->due_time.tm_year) == 3){
+        if (new_note->due_time.tm_mday >= 1 && new_note->due_time.tm_mday <= 31 &&
+            new_note->due_time.tm_mon >= 1 && new_note->due_time.tm_mon <= 12 &&
+            new_note->due_time.tm_year >= 2000 && new_note->due_time.tm_year <= 2100){
+                // printf("SUPER");
+            } else {
+                printf("Error enter date");
+                return;
+            }
+    } else {
+        printf("format is not correct");
+        return;
+    }
+
+
+    // scanf("%02d.%02d.%04d", &new_note->due_time.tm_mday, &new_note->due_time.tm_mon, &new_note->due_time.tm_year);
+    // if(new_note->due_time.tm_mday && new_note->due_time.tm_mon && new_note->due_time.tm_year != 1){
+    //     printf("LOL");        
+    // }
     // strtok(new_note->title, "\n");
     // strtok(new_note->body, "\n");
     // new_note->due_time.tm_mday = day;
