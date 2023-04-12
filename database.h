@@ -32,7 +32,7 @@ void store_note(s_db_entry *note);
 
 char *hash_md5(s_db_entry *note);
 s_db_entry *get_note_list(char *filename);
-s_db_entry *get_note_by_date(struct tm *time);
+s_db_entry *get_note_by_date(struct tm *local_time);
 s_db_entry *get_note_by_title(const char *title);
 s_db_entry *get_note_by_range(struct tm *time_low, struct tm *time_high);
 int update_note(s_db_entry *note); //TBD, Подумати над цим, можливо має приймати щось інше

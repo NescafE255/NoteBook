@@ -122,6 +122,8 @@ void init_db(struct tm *local_time)
 }
 
 void save_file(s_db_entry *note, FILE *fp){
+
+
     if(strlen(note->title) == 0 || strlen(note->body) == 0 || note->due_time.tm_year == 0){
         printf("Error: Data not written to file - empty fields.\n");
         fclose(fp);
@@ -376,22 +378,20 @@ s_db_entry *get_note_list(char *filename){
 // }
 
 
-// s_db_entry *get_note_by_date(struct tm *local_time, struct tm *time)
-// {
-//     struct tm start_date = *local_time;
+s_db_entry *get_note_by_date(struct tm *local_time)
+{
+    struct tm today = *local_time;
 
-//     // start_date.tm_mon = 0;
-    
+    char filename[SIZE_FILENAME];
+    sprintf(filename, "%s%02d_%d", DB_DIR, today.tm_mday, today.tm_year);
 
-//     char filename[50];
-//     sprintf(filename, "%s%02d_%04d", DB_DIR, start_date.tm_mon, start_date.tm_year);
-
-//     FILE *fp = fopen(filename, "r");
+    FILE *fp = fopen(filename, "r");
 
 
-//     //IF time > localtime + 15 days  and buffer_notes contains data from another day
-//         //Store the day of date to buffer_notes
-// }
+
+    //IF time > localtime + 15 days  and buffer_notes contains data from another day
+        //Store the day of date to buffer_notes
+}
 
 
 
