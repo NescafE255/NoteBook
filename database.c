@@ -1,11 +1,12 @@
 #include "database.h"
 
 
-#define READ_BUF_SIZE 1024
+#define SIZE_FILENAME 50
+
+
 
 s_db_entry *near_notes = NULL;
     
-// char data_time_str[50];
 
 
 
@@ -35,22 +36,29 @@ void init_db(struct tm *local_time)
 
 
 
-    //XXX Potential crash here! Check if local_time is not NULL
+    //XXX Potential crash here! Check if local_time is not NULL -+-+
+    if(local_time == NULL){
+        printf("LOCAL TIME NULL");
+    }
     struct tm strart_date = *local_time;
     strart_date.tm_mday -= 5;
-    //it worth to set minutes and hours to 0 here. You don't need to cut the day, right?
+    strart_date.tm_hour = 0;
+    strart_date.tm_min = 0;
+    //it worth to set minutes and hours to 0 here. You don't need to cut the day, right? +++
     mktime(&strart_date);
 
-    //XXX Potential crash here! Check if local_time is not NULL
+    //XXX Potential crash here! Check if local_time is not NULL -+--+
     struct tm end_date = *local_time;
     end_date.tm_mday += 15;
-    //it worth to set minutes and hours to 0 here. You don't need to cut the day, right?
+    end_date.tm_hour = 0;
+    end_date.tm_min = 0;
+    //it worth to set minutes and hours to 0 here. You don't need to cut the day, right? +++
     mktime(&end_date);
 
     s_db_entry *buffer = NULL;
     char *out;
-    //MAGIC NUMBER! Consider adding some DEFINE for filesize or something
-    char filename[50];
+    //MAGIC NUMBER! Consider adding some DEFINE for filesize or something ++++
+    char filename[SIZE_FILENAME];
 
     for(int month = strart_date.tm_mon; month <= end_date.tm_mon; month++){
         for(int year = strart_date.tm_year; year <= end_date.tm_year; year++){
@@ -67,43 +75,46 @@ void init_db(struct tm *local_time)
                 exit(0);
             }  
 
-            char info_hash[34];
+            char info_hash[33];
             memset(info_hash, 0, sizeof(info_hash));
             fgets(info_hash, sizeof(info_hash), fp);
 
 
-            // strtok(info_hash, "\n");
             printf("HASH STORY %s\n", info_hash);
             printf("HASH NEW %s\n", out);
-            if(strcmp(info_hash, out) == 0){
-                //XXX You already have a list here. No need to get it another time. 
-                near_notes = get_note_list(filename);
-            }
-            else {
+            if(strcmp(info_hash, out) != 0){
                 printf("The file is corrupted\n");
+                free(buffer);
+                OPENSSL_free(out);
                 //XXX Memory leak here! You have to free entire "buffer" list
                 continue;
             }
+            // else {
+            //     //XXX You already have a list here. No need to get it another time. 
+            //     near_notes = get_note_list(filename);
+            // }
 
             //XXX You already have a list in "buffer"
+            near_notes = malloc(sizeof(s_db_entry));
+            near_notes = buffer;
             dispalay_list(near_notes);
 
             //XXX You have to remove the list in loop.
             //XXX Something like this.
             //XXX LIST consider moving this free to separate list file
-            /*
-                s_db_entry *tmp, *tmp_next;
-                tmp = near_notes;
-                while (tmp) {
-                    tmp_next = tmp->next;
-                    free(tmp);
-                    tmp = tmp_next;
-                }
-            */
-            free(near_notes);
+            
+            s_db_entry *tmp, *tmp_next;
+            tmp = near_notes;
+            while (tmp) {
+                tmp_next = tmp->next;
+                free(tmp);
+                tmp = tmp_next;
+            }
+            
+            // free(near_notes);
             //XXX You don't need to remove the list here. near_notes have to be storred forever here.
             //XXX If user will request an entry from this data range - return a value from this list without opening file
-            free(buffer);
+            // free(buffer);
             OPENSSL_free(out);
             fclose(fp);
         }
@@ -120,7 +131,7 @@ void save_file(s_db_entry *note, FILE *fp){
     fputs(note->body, fp);
 
     //Bring back this line. It is needed for us
-    char date_time_str[50];
+    char date_time_str[SIZE_FILENAME];
     sprintf(date_time_str, "%02d.%02d.%04d", note->due_time.tm_mday, note->due_time.tm_mon, note->due_time.tm_year);
     fputs(date_time_str, fp);
     fputs("\n", fp);
@@ -130,96 +141,84 @@ void save_file(s_db_entry *note, FILE *fp){
 void store_note(s_db_entry *note)
 {
     s_db_entry *buffer = NULL;
-    // char *store_hash = NULL;
     char *out;
-    // char *out1;
+    struct stat st;
     FILE *fp;
+    int size;
     char filename[30];
-    //%s%02d_%d would be better. Spaces in file_name is evel
+    //%s%02d_%d would be better. Spaces in file_name is evel +++
     sprintf(filename, "%s%02d_%d", DB_DIR, note->due_time.tm_mon, note->due_time.tm_year);
+    char file_hash[33];
     
 
-
-
-
-    //XXX You may use stat() to check file
-    fp = fopen(filename, "a");
+    fp = fopen(filename, "r");
+    stat(filename, &st);
+    size = st.st_size;
+    printf("Size of FILE: %d\n", size);
     if(fp == NULL){
-        perror("Error opening file");
-        exit(0);
-    }
-
-    fseek(fp, 0, SEEK_END);
-    // printf("1) %ld\n", ftell(fp));
-
-
-    if(ftell(fp) == 0){
-        fseek(fp, 0, SEEK_SET);
+        fp = fopen(filename, "w");
+        if(fp == NULL){
+            perror("Error opening file");
+            exit(0);
+        }
         out = hash_md5(note);
-        printf("Pos end out %ld", strlen(out));
+        printf("created a new hash:  %s\n", out);
+        // printf("Pos end out %ld", strlen(out));
         fputs(out, fp);
+        fputs("\n", fp);
         save_file(note, fp);
         fclose(fp);
         OPENSSL_free(out);
         return;
     }
-    else{
-        //XXX YOU DID NOT CLOSE PREVIOUS FP HERE!
-        fp = fopen(filename, "r");
-        if(fp == NULL){
-            perror("Error opening file");
-            exit(0);
-        }
-        char file_hash[33];
-        fgets(file_hash, 33, fp);
-        buffer = get_note_list(filename);
-        // memset(out, '\0', 33);
-        //XXX Maybe hash_md5 should not contain \n?
-        out = hash_md5(buffer);
-        strtok(file_hash, "\n");
-        strtok(out, "\n");
-        printf("%s\n", file_hash);
-        printf("%s\n", out);
-        if(strcmp(file_hash, out) != 0){
-            //XXX Use unlink() to clear file
-            //XXX You did not close previous fp!!!!!
-            fp = fopen(filename, "w+");
-            out = hash_md5(note);
-            fputs(out, fp);
-            save_file(note, fp);
-            OPENSSL_free(out);
-            fclose(fp);
-            return;
-        } else {
-            //XXX You already have it! WHy do you get it another time?
-            buffer = get_note_list(filename);
-            //XXX Hash is also there. WHy do you recalculate it?
-            out = hash_md5(buffer);
-            fp = fopen(filename, "w+");
-            fputs(out, fp);
-            if(buffer == NULL){
-                printf("BUFFER NULL");
-            }
-            //XXX Why do you need to rewrite all the file? You may just fseek to the end to just save_file(note, fp)
-            while(buffer){
-                printf("TITLE: %s\n", buffer->title);
-                printf("BODY: %s\n", buffer->body);
-                printf("date: %d.%d.%d\n", buffer->due_time.tm_mday, buffer->due_time.tm_mon, buffer->due_time.tm_year);
-                save_file(buffer, fp);
-                buffer = buffer->next;
-            }
-             save_file(note, fp);
 
+    if(size > 0){
+        fseek(fp, 0, SEEK_SET);
+        file_hash[0] = '\0';
+        fgets(file_hash, sizeof(file_hash), fp);
+        buffer = get_note_list(filename);
+        out = hash_md5(buffer);
+        printf("HASH NEW FILES:  %s\n", out);
+        printf("HASH SAVE FILES: %s\n", file_hash);
+
+        if(strcmp(file_hash, out) == 0){
+            // printf("YES\n");
+            fclose(fp);
+            fp = fopen(filename, "a");
+            // printf("HASH NEW FILES ADD1:  %s\n", out);
+            save_file(note, fp);
+        } else {
+            printf("NO\n");
+            fclose(fp);
+            remove(filename);
+
+            fp = fopen(filename, "a");
+            unlink(out);
+            out = hash_md5(note);
+            printf("HASH NEW FILES ADD2:  %s\n", out);
+            // printf("Pos end out %ld", strlen(out));
+            fputs(out, fp);
+            fputs("\n", fp);
+            save_file(note, fp);
+            fclose(fp);
+            OPENSSL_free(out);
+            return;
         }
+
     }
 
-
-    
-        
-        // save_file(note, fp);
-        // // printf("%s", file_hash);
-        // fclose(fp);
-
+    fclose(fp);
+    unlink(out);
+    buffer = get_note_list(filename);
+    out = hash_md5(buffer);
+    fp = fopen(filename, "w+");
+    fputs(out, fp);
+    fputs("\n", fp);
+    printf("HASH NEW FILES ADD:  %s\n", out);
+    while(buffer){
+        save_file(buffer, fp);
+        buffer = buffer->next;
+    }
 
     fclose(fp);
     free(buffer);
@@ -233,7 +232,7 @@ char *hash_md5(s_db_entry *note){
     EVP_MD_CTX *mdctx;
     char buf[MAX_TITLE_SYMBOLS + MAX_BODY_SYMBOLS + 11];
     //XXX We do not read here. Change variable name to buf_size or something
-    size_t bytes_read;
+    size_t buf_size;
     s_db_entry *tmp;
     
 
@@ -244,18 +243,21 @@ char *hash_md5(s_db_entry *note){
     EVP_DigestInit_ex(mdctx, EVP_md5(), NULL);
 
   
-    char date_time_str[50];
+    char date_time_str[SIZE_FILENAME];
     if(note == NULL){
         printf("hash NOTE empty!");
     }
 
     tmp = note;
     while(tmp){
-        sprintf(date_time_str, "%02d.%02d.%04d", tmp->due_time.tm_mday, tmp->due_time.tm_mon, tmp->due_time.tm_year);
+        sprintf(date_time_str, "%02d.%02d.%02d", tmp->due_time.tm_mday, 
+                                                tmp->due_time.tm_mon, 
+                                                tmp->due_time.tm_year);
         // printf("DATE in hash_md5: %s\n", date_time_str);
         //XXX Consider removing \n from line below
-        bytes_read = snprintf(buf, MAX_TITLE_SYMBOLS + MAX_BODY_SYMBOLS + 11, "%s\n%s\n%s\n", tmp->title, tmp->body, date_time_str);
-        EVP_DigestUpdate(mdctx, buf, bytes_read);
+        buf_size = snprintf(buf, MAX_TITLE_SYMBOLS + MAX_BODY_SYMBOLS + 11, "%ld%ld%ld", strcspn(tmp->title, "\n"), strcspn(tmp->body, "\n"), strcspn(date_time_str, "\n"));
+        // strcspn(buf, "\n");
+        EVP_DigestUpdate(mdctx, buf, buf_size);
         tmp = tmp->next;
     }
 
@@ -264,7 +266,7 @@ char *hash_md5(s_db_entry *note){
     unsigned int hash_str_len = EVP_MD_size(EVP_md5());
 
     
-    char *hash_str = (char *)OPENSSL_malloc(hash_str_len * 2 + 1);
+    char *hash_str = (char *)OPENSSL_malloc(hash_str_len * 2);
 
     EVP_DigestFinal_ex(mdctx, hash_sum, &hash_str_len);
     EVP_MD_CTX_free(mdctx);
@@ -273,7 +275,7 @@ char *hash_md5(s_db_entry *note){
         sprintf(&hash_str[i * 2], "%02x", hash_sum[i]);
     }
 
-    hash_str[hash_str_len * 2] = '\n';
+    // hash_str[hash_str_len * 2] = '\n';
 
     return hash_str;
 }
@@ -302,7 +304,7 @@ s_db_entry *get_note_list(char *filename){
         fgets(line, sizeof(line), fp);
         strcpy(note->body, line);
 
-        char date_time_str[50];
+        char date_time_str[SIZE_FILENAME];
         int day, mon, year;
         fgets(date_time_str, sizeof(date_time_str), fp);
         sscanf(date_time_str, "%d.%d.%d", &day, &mon, &year);

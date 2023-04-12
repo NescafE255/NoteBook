@@ -3,6 +3,8 @@
 #include <string.h>
 #include <errno.h>
 #include <time.h>
+#include <unistd.h>
+#include <sys/stat.h>
 #include <dirent.h>
 #include <openssl/md5.h>
 #include <openssl/evp.h>
