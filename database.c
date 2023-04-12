@@ -39,12 +39,13 @@ void init_db(struct tm *local_time)
     //XXX Potential crash here! Check if local_time is not NULL -+-+
     if(local_time == NULL){
         printf("LOCAL TIME NULL");
+        //XXX return
     }
     struct tm strart_date = *local_time;
     strart_date.tm_mday -= 5;
     strart_date.tm_hour = 0;
     strart_date.tm_min = 0;
-    //it worth to set minutes and hours to 0 here. You don't need to cut the day, right? +++
+    //XXX Do we really need this mktime? What it does?
     mktime(&strart_date);
 
     //XXX Potential crash here! Check if local_time is not NULL -+--+
@@ -52,12 +53,11 @@ void init_db(struct tm *local_time)
     end_date.tm_mday += 15;
     end_date.tm_hour = 0;
     end_date.tm_min = 0;
-    //it worth to set minutes and hours to 0 here. You don't need to cut the day, right? +++
+    //XXX Do we really need this mktime? What it does?
     mktime(&end_date);
 
     s_db_entry *buffer = NULL;
     char *out;
-    //MAGIC NUMBER! Consider adding some DEFINE for filesize or something ++++
     char filename[SIZE_FILENAME];
 
     for(int month = strart_date.tm_mon; month <= end_date.tm_mon; month++){
@@ -72,6 +72,8 @@ void init_db(struct tm *local_time)
             fp = fopen(filename, "r");
             if(fp == NULL){
                 perror("Error opening file");
+                //XXX Why do you exit here? And this perror is redundant. User may not have notes at all.
+                //XXX It does not mean that we have to exit! Just continue the loop
                 exit(0);
             }  
 
@@ -84,9 +86,9 @@ void init_db(struct tm *local_time)
             printf("HASH NEW %s\n", out);
             if(strcmp(info_hash, out) != 0){
                 printf("The file is corrupted\n");
+                //XXX Memory leak here! You freed only the first item of the list. The rest are still not freed.
                 free(buffer);
                 OPENSSL_free(out);
-                //XXX Memory leak here! You have to free entire "buffer" list
                 continue;
             }
             // else {
@@ -94,15 +96,17 @@ void init_db(struct tm *local_time)
             //     near_notes = get_note_list(filename);
             // }
 
-            //XXX You already have a list in "buffer"
+            //XXX Why do you need this malloc? The pointer to this memory is lost after next line
             near_notes = malloc(sizeof(s_db_entry));
+            //XXX HERE! YOU JUST LOST POINTER TO ALLOCATED MEMORY!
             near_notes = buffer;
+            //XXX Display, not dispalay
             dispalay_list(near_notes);
 
-            //XXX You have to remove the list in loop.
-            //XXX Something like this.
+            //XXX You don't need to remove the list here. near_notes have to be storred forever here.
+            //XXX If user will request an entry from this data range - return a value from this list without opening file
+
             //XXX LIST consider moving this free to separate list file
-            
             s_db_entry *tmp, *tmp_next;
             tmp = near_notes;
             while (tmp) {
@@ -112,8 +116,6 @@ void init_db(struct tm *local_time)
             }
             
             // free(near_notes);
-            //XXX You don't need to remove the list here. near_notes have to be storred forever here.
-            //XXX If user will request an entry from this data range - return a value from this list without opening file
             // free(buffer);
             OPENSSL_free(out);
             fclose(fp);
@@ -130,7 +132,6 @@ void save_file(s_db_entry *note, FILE *fp){
     fputs(note->title, fp);
     fputs(note->body, fp);
 
-    //Bring back this line. It is needed for us
     char date_time_str[SIZE_FILENAME];
     sprintf(date_time_str, "%02d.%02d.%04d", note->due_time.tm_mday, note->due_time.tm_mon, note->due_time.tm_year);
     fputs(date_time_str, fp);
@@ -183,16 +184,21 @@ void store_note(s_db_entry *note)
 
         if(strcmp(file_hash, out) == 0){
             // printf("YES\n");
+            //XXX fseek to the end of file does not work instead of reopening? Or you may open it already with "a", not in with "w"?
             fclose(fp);
             fp = fopen(filename, "a");
             // printf("HASH NEW FILES ADD1:  %s\n", out);
+            //XXX Consider adding the note also to the "buffer" list. You will not need to read the entire file again
             save_file(note, fp);
         } else {
             printf("NO\n");
             fclose(fp);
+            //XXX unlink instead of remove
             remove(filename);
 
+            //XXX "w" will be more convenient
             fp = fopen(filename, "a");
+            //XXX unlink file, not buffer! OPENSSL_free here!
             unlink(out);
             out = hash_md5(note);
             printf("HASH NEW FILES ADD2:  %s\n", out);
@@ -208,19 +214,26 @@ void store_note(s_db_entry *note)
     }
 
     fclose(fp);
+    //XXX unlink file! redundant here!
     unlink(out);
+    //XXX WConsider adding "note" to the "buffer" list above! You will not need to read the entire file again.
+    //XXX Memory leak here! HUGE!
     buffer = get_note_list(filename);
     out = hash_md5(buffer);
+    //XXX OK. You for some reason reopens file each time. Please try to find a way how to open it once and do what you want
+    //XXX using fseek probably
     fp = fopen(filename, "w+");
     fputs(out, fp);
     fputs("\n", fp);
     printf("HASH NEW FILES ADD:  %s\n", out);
+    //XXX Why do you need to rewrite the file? Your file already contains all the data!
     while(buffer){
         save_file(buffer, fp);
         buffer = buffer->next;
     }
 
     fclose(fp);
+    //XXX Memory leak here! Free buffer in loop to free all items in list!
     free(buffer);
     OPENSSL_free(out);
 }
@@ -246,6 +259,7 @@ char *hash_md5(s_db_entry *note){
     char date_time_str[SIZE_FILENAME];
     if(note == NULL){
         printf("hash NOTE empty!");
+        //XXX return NULL here probably! At least no need to continue here!
     }
 
     tmp = note;
@@ -254,7 +268,7 @@ char *hash_md5(s_db_entry *note){
                                                 tmp->due_time.tm_mon, 
                                                 tmp->due_time.tm_year);
         // printf("DATE in hash_md5: %s\n", date_time_str);
-        //XXX Consider removing \n from line below
+        //XXX magic number! Use define instead of 11
         buf_size = snprintf(buf, MAX_TITLE_SYMBOLS + MAX_BODY_SYMBOLS + 11, "%ld%ld%ld", strcspn(tmp->title, "\n"), strcspn(tmp->body, "\n"), strcspn(date_time_str, "\n"));
         // strcspn(buf, "\n");
         EVP_DigestUpdate(mdctx, buf, buf_size);
