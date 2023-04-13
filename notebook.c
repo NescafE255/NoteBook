@@ -73,7 +73,6 @@ void add_note(){
     // printf("%02d%02d.%04d", new_note->due_time.tm_mday, new_note->due_time.tm_mon, new_note->due_time.tm_year);
 
     store_note(new_note);
-    // add_hash_file(new_note);
     
 
     // free(new_note);
