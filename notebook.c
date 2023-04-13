@@ -76,7 +76,7 @@ void add_note(){
     // add_hash_file(new_note);
     
 
-    free(new_note);
+    // free(new_note);
     printf("Запис додано!\n");
 }
 

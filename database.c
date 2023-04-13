@@ -11,7 +11,7 @@ s_db_entry *near_notes = NULL;
 
 
 //XXX LIST Consider moving actions with list to separate file (list.c + list.h for example)
-void dispalay_list(s_db_entry *note){
+void display_list(s_db_entry *note){
     s_db_entry *tmp = note;
     while(tmp){
         printf("TITLE: %s", tmp->title);
@@ -40,21 +40,22 @@ void init_db(struct tm *local_time)
     if(local_time == NULL){
         printf("LOCAL TIME NULL");
         //XXX return
+        return;
     }
     struct tm strart_date = *local_time;
     strart_date.tm_mday -= 5;
     strart_date.tm_hour = 0;
-    strart_date.tm_min = 0;
-    //XXX Do we really need this mktime? What it does?
-    mktime(&strart_date);
+    strart_date.tm_min = 0; 
+    //XXX Do we really need this mktime? What it does? +++
+    // mktime(&strart_date);
 
     //XXX Potential crash here! Check if local_time is not NULL -+--+
     struct tm end_date = *local_time;
     end_date.tm_mday += 15;
     end_date.tm_hour = 0;
     end_date.tm_min = 0;
-    //XXX Do we really need this mktime? What it does?
-    mktime(&end_date);
+    //XXX Do we really need this mktime? What it does? ++++
+    // mktime(&end_date);
 
     s_db_entry *buffer = NULL;
     char *out;
@@ -97,11 +98,11 @@ void init_db(struct tm *local_time)
             // }
 
             //XXX Why do you need this malloc? The pointer to this memory is lost after next line
-            near_notes = malloc(sizeof(s_db_entry));
+            // near_notes = malloc(sizeof(s_db_entry));
             //XXX HERE! YOU JUST LOST POINTER TO ALLOCATED MEMORY!
             near_notes = buffer;
             //XXX Display, not dispalay
-            dispalay_list(near_notes);
+            display_list(near_notes);
 
             //XXX You don't need to remove the list here. near_notes have to be storred forever here.
             //XXX If user will request an entry from this data range - return a value from this list without opening file
@@ -152,24 +153,30 @@ void store_note(s_db_entry *note)
     char file_hash[33];
     
 
-    fp = fopen(filename, "r");
+    fp = fopen(filename, "r+");
+    if(fp == NULL){
+        // printf("ERROR OPEN FILE");
+        fp = fopen(filename, "a+");
+        if(fp == NULL){
+            perror("ERROR FILE OPEN");
+            exit(1);
+        }
+    }
+
+
     stat(filename, &st);
     size = st.st_size;
     printf("Size of FILE: %d\n", size);
-    if(fp == NULL){
-        fp = fopen(filename, "w");
-        if(fp == NULL){
-            perror("Error opening file");
-            exit(0);
-        }
+    if(size == 0){
         out = hash_md5(note);
         printf("created a new hash:  %s\n", out);
         // printf("Pos end out %ld", strlen(out));
         fputs(out, fp);
         fputs("\n", fp);
         save_file(note, fp);
-        fclose(fp);
         OPENSSL_free(out);
+        free(note);
+        fclose(fp);
         return;
     }
 
@@ -184,28 +191,37 @@ void store_note(s_db_entry *note)
 
         if(strcmp(file_hash, out) == 0){
             // printf("YES\n");
-            //XXX fseek to the end of file does not work instead of reopening? Or you may open it already with "a", not in with "w"?
-            fclose(fp);
-            fp = fopen(filename, "a");
-            // printf("HASH NEW FILES ADD1:  %s\n", out);
-            //XXX Consider adding the note also to the "buffer" list. You will not need to read the entire file again
-            save_file(note, fp);
-        } else {
-            printf("NO\n");
-            fclose(fp);
-            //XXX unlink instead of remove
-            remove(filename);
+            if(buffer == NULL){
+                buffer = note;
+            } else {
+            s_db_entry *tmp = buffer;
+            while(tmp->next){
+                // printf("%s", tmp->title);
+                tmp = tmp->next;
+            }
+            tmp->next = note;
+            }
 
-            //XXX "w" will be more convenient
-            fp = fopen(filename, "a");
-            //XXX unlink file, not buffer! OPENSSL_free here!
-            unlink(out);
+        } else {
+            // printf("NO\n");
+            s_db_entry *tmp;
+            while(buffer){
+                // save_file(buffer, fp);
+                tmp = buffer->next;
+                free(buffer);
+                buffer = tmp;
+            }
+            buffer = NULL;
+
+            unlink(filename);
+            fp = fopen(filename, "w");
             out = hash_md5(note);
             printf("HASH NEW FILES ADD2:  %s\n", out);
             // printf("Pos end out %ld", strlen(out));
             fputs(out, fp);
             fputs("\n", fp);
             save_file(note, fp);
+            free(note);
             fclose(fp);
             OPENSSL_free(out);
             return;
@@ -213,29 +229,26 @@ void store_note(s_db_entry *note)
 
     }
 
-    fclose(fp);
-    //XXX unlink file! redundant here!
-    unlink(out);
-    //XXX WConsider adding "note" to the "buffer" list above! You will not need to read the entire file again.
-    //XXX Memory leak here! HUGE!
-    buffer = get_note_list(filename);
+
+    out = NULL;
     out = hash_md5(buffer);
-    //XXX OK. You for some reason reopens file each time. Please try to find a way how to open it once and do what you want
-    //XXX using fseek probably
-    fp = fopen(filename, "w+");
+    rewind(fp);
     fputs(out, fp);
     fputs("\n", fp);
-    printf("HASH NEW FILES ADD:  %s\n", out);
-    //XXX Why do you need to rewrite the file? Your file already contains all the data!
+    // printf("HASH NEW FILES ADD:  %s\n", out);
+    
+    
+    
+    s_db_entry *tmp;
     while(buffer){
         save_file(buffer, fp);
-        buffer = buffer->next;
+        tmp = buffer->next;
+        free(buffer);
+        buffer = tmp;
     }
-
-    fclose(fp);
-    //XXX Memory leak here! Free buffer in loop to free all items in list!
-    free(buffer);
+    buffer = NULL;
     OPENSSL_free(out);
+    fclose(fp);
 }
 
 
@@ -244,7 +257,6 @@ char *hash_md5(s_db_entry *note){
 
     EVP_MD_CTX *mdctx;
     char buf[MAX_TITLE_SYMBOLS + MAX_BODY_SYMBOLS + 11];
-    //XXX We do not read here. Change variable name to buf_size or something
     size_t buf_size;
     s_db_entry *tmp;
     
@@ -293,6 +305,7 @@ char *hash_md5(s_db_entry *note){
 
     return hash_str;
 }
+
 
 s_db_entry *get_note_list(char *filename){
     FILE *fp = fopen(filename, "r");
