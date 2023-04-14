@@ -88,16 +88,16 @@ void init_db(struct tm *local_time)
             s_db_entry *tmp = buffer;
             while(tmp){
                 if(tmp->due_time.tm_mday >= start_date.tm_mday && tmp->due_time.tm_mday <= end_date.tm_mday){
-                    append(near_notes, tmp);
-                    // if(near_notes == NULL){
-                    //     near_notes = tmp;
-                    // } else {
-                    //     s_db_entry *head = near_notes;
-                    //     while(head->next){
-                    //         head = head->next;
-                    //     }
-                    //     head = tmp;
-                    // }
+                    // append(near_notes, tmp);
+                    if(near_notes == NULL){
+                        near_notes = tmp;
+                    } else {
+                        s_db_entry *head = near_notes;
+                        while(head->next){
+                            head = head->next;
+                        }
+                        head = tmp;
+                    }
                     display_list(near_notes);
                     printf("append");
                 }
