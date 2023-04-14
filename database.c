@@ -139,11 +139,23 @@ void store_note(s_db_entry *note, struct tm *local_time)
     printf("END %d.%d\n", end_date.tm_mday, end_date.tm_year);
 
     if(note->due_time.tm_mday >= start_date.tm_mday && note->due_time.tm_mday <= end_date.tm_mday){
-        s_db_entry *tmp = malloc(sizeof(s_db_entry));
-        tmp = note;
-        append(near_notes, tmp);
-        display_list(near_notes);
-        printf("Titel APPEND near_notes: %s\n ****\n", tmp->title);
+        // s_db_entry *tmp = malloc(sizeof(s_db_entry));
+        // tmp = note;
+        // append(near_notes, tmp);
+        // display_list(near_notes);
+            if(near_notes == NULL){
+                near_notes = note;
+            } else {
+                s_db_entry *head = near_notes;
+                while(head->next){
+                    head = head->next;
+                }
+                head = note;
+            }
+            display_list(near_notes);
+            printf("append");
+            
+        printf("Titel APPEND near_notes: %s\n ****\n", note->title);
         // printf("LIST near_notes: %s\n ****\n", near_notes->title);
         // display_list(near_notes);
     }
