@@ -48,6 +48,7 @@ void init_db(struct tm *local_time)
 
     char *out;
     char filename[SIZE_FILENAME];
+    s_db_entry *buffer;
 
     for(int month = start_date.tm_mon; month <= end_date.tm_mon; month++){
         for(int year = start_date.tm_year; year <= end_date.tm_year; year++){
@@ -55,8 +56,8 @@ void init_db(struct tm *local_time)
             printf("***************\n");
             printf("%s\n", filename);
             FILE *fp;
-            near_notes = get_note_list(filename);
-            out = hash_md5(near_notes);
+            buffer = get_note_list(filename);
+            out = hash_md5(buffer);
 
 
             //need check here?????
@@ -81,6 +82,27 @@ void init_db(struct tm *local_time)
                 free_memory(near_notes);
                 OPENSSL_free(out);
                 continue;
+            }
+
+
+            s_db_entry *tmp = buffer;
+            while(tmp){
+                if(tmp->due_time.tm_mday >= start_date.tm_mday && tmp->due_time.tm_mday <= end_date.tm_mday){
+                    append(near_notes, tmp);
+                    // if(near_notes == NULL){
+                    //     near_notes = tmp;
+                    // } else {
+                    //     s_db_entry *head = near_notes;
+                    //     while(head->next){
+                    //         head = head->next;
+                    //     }
+                    //     head = tmp;
+                    // }
+                    display_list(near_notes);
+                    printf("append");
+                }
+
+                tmp = tmp->next;
             }
 
 
