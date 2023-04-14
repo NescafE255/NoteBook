@@ -36,14 +36,14 @@ void init_db(struct tm *local_time)
     start_date.tm_mday -= 5;
     start_date.tm_hour = 0;
     start_date.tm_min = 0; 
-
-
+    printf("DATE init start: %d.%d\n", start_date.tm_mon, start_date.tm_year);
     struct tm end_date = *local_time;
     end_date.tm_year += 1900;
     end_date.tm_mon += 1;
     end_date.tm_mday += 15;
     end_date.tm_hour = 0;
     end_date.tm_min = 0;
+    printf("DATE init end: %d.%d\n", end_date.tm_mon, end_date.tm_year);
 
 
     char *out;
@@ -112,7 +112,19 @@ void store_note(s_db_entry *note, struct tm *local_time)
 
     // printf("Start mon %d\n", start_date.tm_mon);
     // printf("END mon %d\n", end_date.tm_mon);
+    printf("DATE NOTE %d.%d\n", note->due_time.tm_mday, note->due_time.tm_year);
+    printf("START %d.%d\n", start_date.tm_mday, start_date.tm_year);
+    printf("END %d.%d\n", end_date.tm_mday, end_date.tm_year);
 
+    if(note->due_time.tm_mday >= start_date.tm_mday && note->due_time.tm_mday <= end_date.tm_mday){
+        s_db_entry *tmp = malloc(sizeof(s_db_entry));
+        tmp = note;
+        append(near_notes, tmp);
+        display_list(near_notes);
+        printf("Titel APPEND near_notes: %s\n ****\n", tmp->title);
+        // printf("LIST near_notes: %s\n ****\n", near_notes->title);
+        // display_list(near_notes);
+    }
 
     s_db_entry *buffer = NULL;
     char *out;
@@ -162,6 +174,7 @@ void store_note(s_db_entry *note, struct tm *local_time)
         // printf("HASH SAVE FILES: %s\n", file_hash);
 
         if(strcmp(file_hash, out) == 0){
+            // printf("Title append  %s", note->title);
             append(buffer, note);
         } else {
             free_memory(buffer);
@@ -181,9 +194,7 @@ void store_note(s_db_entry *note, struct tm *local_time)
 
     }
 
-    if(note->due_time.tm_mday >= start_date.tm_mday && note->due_time.tm_mday <= end_date.tm_mday){
-        append(near_notes, note);
-    }
+
 
     out = NULL;
     out = hash_md5(buffer);
@@ -266,7 +277,8 @@ s_db_entry *get_note_list(char *filename){
     FILE *fp = fopen(filename, "r");
     if(fp == NULL){
         perror("Error opening file");
-        exit(0);
+        // exit(0);
+        return 0;
     }
 
 

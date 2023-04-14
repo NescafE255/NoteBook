@@ -229,18 +229,18 @@ void make_print(){
 int main(){
     struct tm *present_time = getCurrentDateTime();
 
+    char date_time[100];
+    strftime(date_time, sizeof(date_time), "Date: %Y-%m-%d\nTime: %H:%M:%S\n", present_time);
 
     init_db(present_time);
     while(1){
-        char date_time[100];
-        strftime(date_time, sizeof(date_time), "Date: %Y-%m-%d\nTime: %H:%M:%S\n", present_time);
         printf("%s", date_time);
         display_list(near_notes);
+        make_print();
         
 
 
-        make_print();
     }
-
+    
     return 0;
 }
