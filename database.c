@@ -1,7 +1,7 @@
 #include "database.h"
 
 
-#define SIZE_FILENAME 50
+// #define SIZE_FILENAME 50
 
 
 
@@ -11,18 +11,7 @@ s_db_entry *near_notes = NULL;
 
 
 //XXX LIST Consider moving actions with list to separate file (list.c + list.h for example)
-void display_list(s_db_entry *note){
-    s_db_entry *tmp = note;
-    while(tmp){
-        printf("TITLE: %s", tmp->title);
-        printf("BODY: %s", tmp->body);
-        printf("DATE: %02d.%02d.%04d\n",  tmp->due_time.tm_mday,
-                                    tmp->due_time.tm_mon,
-                                    tmp->due_time.tm_year);
-        printf("\n");
-        tmp = tmp->next;
-    }
-}
+
 
 void init_db(struct tm *local_time)
 {
@@ -34,116 +23,97 @@ void init_db(struct tm *local_time)
     }
     closedir(dir);
 
+  
 
 
-    //XXX Potential crash here! Check if local_time is not NULL -+-+
     if(local_time == NULL){
         printf("LOCAL TIME NULL");
-        //XXX return
         return;
     }
-    struct tm strart_date = *local_time;
-    strart_date.tm_mday -= 5;
-    strart_date.tm_hour = 0;
-    strart_date.tm_min = 0; 
-    //XXX Do we really need this mktime? What it does? +++
-    // mktime(&strart_date);
+    struct tm start_date = *local_time;
+    start_date.tm_year += 1900;
+    start_date.tm_mon += 1;
+    start_date.tm_mday -= 5;
+    start_date.tm_hour = 0;
+    start_date.tm_min = 0; 
 
-    //XXX Potential crash here! Check if local_time is not NULL -+--+
+
     struct tm end_date = *local_time;
+    end_date.tm_year += 1900;
+    end_date.tm_mon += 1;
     end_date.tm_mday += 15;
     end_date.tm_hour = 0;
     end_date.tm_min = 0;
-    //XXX Do we really need this mktime? What it does? ++++
-    // mktime(&end_date);
 
-    s_db_entry *buffer = NULL;
+
     char *out;
     char filename[SIZE_FILENAME];
 
-    for(int month = strart_date.tm_mon; month <= end_date.tm_mon; month++){
-        for(int year = strart_date.tm_year; year <= end_date.tm_year; year++){
+    for(int month = start_date.tm_mon; month <= end_date.tm_mon; month++){
+        for(int year = start_date.tm_year; year <= end_date.tm_year; year++){
             sprintf(filename, "%s%02d_%d", DB_DIR, month, year);
             printf("***************\n");
             printf("%s\n", filename);
             FILE *fp;
-            buffer = get_note_list(filename);
-            out = hash_md5(buffer);
+            near_notes = get_note_list(filename);
+            out = hash_md5(near_notes);
 
+
+            //need check here?????
             fp = fopen(filename, "r");
             if(fp == NULL){
-                perror("Error opening file");
+                // perror("Error opening file");
                 //XXX Why do you exit here? And this perror is redundant. User may not have notes at all.
                 //XXX It does not mean that we have to exit! Just continue the loop
-                exit(0);
-            }  
+                // exit(0);
+                continue;
+            }
 
             char info_hash[33];
             memset(info_hash, 0, sizeof(info_hash));
             fgets(info_hash, sizeof(info_hash), fp);
 
 
-            printf("HASH STORY %s\n", info_hash);
-            printf("HASH NEW %s\n", out);
+            // printf("HASH STORY %s\n", info_hash);
+            // printf("HASH NEW %s\n", out);
             if(strcmp(info_hash, out) != 0){
                 printf("The file is corrupted\n");
-                //XXX Memory leak here! You freed only the first item of the list. The rest are still not freed.
-                free(buffer);
+                free_memory(near_notes);
                 OPENSSL_free(out);
                 continue;
             }
-            // else {
-            //     //XXX You already have a list here. No need to get it another time. 
-            //     near_notes = get_note_list(filename);
-            // }
 
-            //XXX Why do you need this malloc? The pointer to this memory is lost after next line
-            // near_notes = malloc(sizeof(s_db_entry));
-            //XXX HERE! YOU JUST LOST POINTER TO ALLOCATED MEMORY!
-            near_notes = buffer;
-            //XXX Display, not dispalay
-            display_list(near_notes);
 
-            //XXX You don't need to remove the list here. near_notes have to be storred forever here.
-            //XXX If user will request an entry from this data range - return a value from this list without opening file
-
-            //XXX LIST consider moving this free to separate list file
-            s_db_entry *tmp, *tmp_next;
-            tmp = near_notes;
-            while (tmp) {
-                tmp_next = tmp->next;
-                free(tmp);
-                tmp = tmp_next;
-            }
-            
-            // free(near_notes);
-            // free(buffer);
             OPENSSL_free(out);
             fclose(fp);
         }
     }
 }
 
-void save_file(s_db_entry *note, FILE *fp){
 
 
-    if(strlen(note->title) == 0 || strlen(note->body) == 0 || note->due_time.tm_year == 0){
-        printf("Error: Data not written to file - empty fields.\n");
-        fclose(fp);
-        return;
-    }
-    fputs(note->title, fp);
-    fputs(note->body, fp);
-
-    char date_time_str[SIZE_FILENAME];
-    sprintf(date_time_str, "%02d.%02d.%04d", note->due_time.tm_mday, note->due_time.tm_mon, note->due_time.tm_year);
-    fputs(date_time_str, fp);
-    fputs("\n", fp);
-}
-
-
-void store_note(s_db_entry *note)
+void store_note(s_db_entry *note, struct tm *local_time)
 {
+
+
+    struct tm start_date = *local_time;
+    start_date.tm_year += 1900;
+    start_date.tm_mon += 1;
+    start_date.tm_mday -= 5;
+    start_date.tm_hour = 0;
+    start_date.tm_min = 0; 
+
+    struct tm end_date = *local_time;
+    end_date.tm_year += 1900;
+    end_date.tm_mon += 1;
+    end_date.tm_mday += 15;
+    end_date.tm_hour = 0;
+    end_date.tm_min = 0;
+
+    // printf("Start mon %d\n", start_date.tm_mon);
+    // printf("END mon %d\n", end_date.tm_mon);
+
+
     s_db_entry *buffer = NULL;
     char *out;
     struct stat st;
@@ -168,7 +138,7 @@ void store_note(s_db_entry *note)
 
     stat(filename, &st);
     size = st.st_size;
-    printf("Size of FILE: %d\n", size);
+    // printf("Size of FILE: %d\n", size);
     if(size == 0){
         out = hash_md5(note);
         printf("created a new hash:  %s\n", out);
@@ -188,33 +158,13 @@ void store_note(s_db_entry *note)
         fgets(file_hash, sizeof(file_hash), fp);
         buffer = get_note_list(filename);
         out = hash_md5(buffer);
-        printf("HASH NEW FILES:  %s\n", out);
-        printf("HASH SAVE FILES: %s\n", file_hash);
+        // printf("HASH NEW FILES:  %s\n", out);
+        // printf("HASH SAVE FILES: %s\n", file_hash);
 
         if(strcmp(file_hash, out) == 0){
-            // printf("YES\n");
-            if(buffer == NULL){
-                buffer = note;
-            } else {
-            s_db_entry *tmp = buffer;
-            while(tmp->next){
-                // printf("%s", tmp->title);
-                tmp = tmp->next;
-            }
-            tmp->next = note;
-            }
-
+            append(buffer, note);
         } else {
-            // printf("NO\n");
-            s_db_entry *tmp;
-            while(buffer){
-                // save_file(buffer, fp);
-                tmp = buffer->next;
-                free(buffer);
-                buffer = tmp;
-            }
-            buffer = NULL;
-
+            free_memory(buffer);
             unlink(filename);
             fp = fopen(filename, "w");
             out = hash_md5(note);
@@ -231,6 +181,9 @@ void store_note(s_db_entry *note)
 
     }
 
+    if(note->due_time.tm_mday >= start_date.tm_mday && note->due_time.tm_mday <= end_date.tm_mday){
+        append(near_notes, note);
+    }
 
     out = NULL;
     out = hash_md5(buffer);
@@ -239,8 +192,8 @@ void store_note(s_db_entry *note)
     fputs("\n", fp);
     // printf("HASH NEW FILES ADD:  %s\n", out);
     
-    
-    
+
+
     s_db_entry *tmp;
     while(buffer){
         save_file(buffer, fp);
@@ -361,58 +314,19 @@ s_db_entry *get_note_list(char *filename){
     return buffer_notes;
 }
 
-//     EVP_MD_CTX *mdctx;
-//     FILE *file;
-//     char buf[MAX_TITLE_SYMBOLS + MAX_BODY_SYMBOLS + 11];
-//     size_t bytes_read;
 
 
-
-//     // MD5_Init
-//     mdctx = EVP_MD_CTX_new();
-//     EVP_DigestInit_ex(mdctx, EVP_md5(), NULL);
-
-//     file = fopen(filename, "r");
-//     if(file == NULL){
-//         perror("Openong error file");
-//         exit(1);
-//     }
-
-//     while((bytes_read = fread(buf, 1, sizeof(buf), file)) > 0){
-//         // printf("%s", buf);
-//         // printf("%ld", bytes_read);
-//         EVP_DigestUpdate(mdctx, buf, bytes_read);
-//     }
-//         // printf("%s", buf);
-//         // printf("%ld", bytes_read);
-
-//     fclose(file);
-
-//     unsigned char md5_sum[MD5_DIGEST_LENGTH];
-//     unsigned int md5_sum_len = 0;
-
-//     EVP_DigestFinal_ex(mdctx, md5_sum, &md5_sum_len);
-//     EVP_MD_CTX_free(mdctx);
-//     char *hash_str = (char *)OPENSSL_malloc(md5_sum_len + 1);
-
-//     for(int i = 0; i < md5_sum_len; i++){
-//         sprintf(&hash_str[i], "%02x", md5_sum[i]);
-//         // fprintf(file, "%d", hash_str[i]);
-//     }
-
-//     hash_str[md5_sum_len] = '\n';
-//     return hash_str;
-// }
-
-
-s_db_entry *get_note_by_date(struct tm *local_time)
+s_db_entry *get_note_by_date(char *filename)
 {
-    struct tm today = *local_time;
+    // struct tm today = *local_time;
 
-    char filename[SIZE_FILENAME];
-    sprintf(filename, "%s%02d_%d", DB_DIR, today.tm_mday, today.tm_year);
+    // char filename[SIZE_FILENAME];
+    // sprintf(filename, "%s%02d_%d", DB_DIR, today.tm_mday, today.tm_year);
 
-    FILE *fp = fopen(filename, "r");
+    fopen(filename, "r");
+    return get_note_list(filename);
+    // display_list(buffer);
+    // free_memory(buffer);
 
 
 
