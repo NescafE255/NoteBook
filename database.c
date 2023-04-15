@@ -10,9 +10,6 @@ s_db_entry *near_notes = NULL;
 
 
 
-//XXX LIST Consider moving actions with list to separate file (list.c + list.h for example)
-
-
 void init_db(struct tm *local_time)
 {
     // fill near_notes; localtime - 5 days < ---- > local_time + 15 days
@@ -63,10 +60,6 @@ void init_db(struct tm *local_time)
             //need check here?????
             fp = fopen(filename, "r");
             if(fp == NULL){
-                // perror("Error opening file");
-                //XXX Why do you exit here? And this perror is redundant. User may not have notes at all.
-                //XXX It does not mean that we have to exit! Just continue the loop
-                // exit(0);
                 continue;
             }
 
@@ -79,6 +72,9 @@ void init_db(struct tm *local_time)
             // printf("HASH NEW %s\n", out);
             if(strcmp(info_hash, out) != 0){
                 printf("The file is corrupted\n");
+		//XXX What will happen if near_notes contains notes from another month?
+		//XXX You will free it all. But you have to free only notes from this month...
+		//XXX Consider creating local list for each month and than merging it to common near_notes list.
                 free_memory(near_notes);
                 OPENSSL_free(out);
                 continue;
@@ -89,6 +85,7 @@ void init_db(struct tm *local_time)
             // near_notes = NULL;
             while(buffer){
                 if(buffer->due_time.tm_mday >= start_date.tm_mday && buffer->due_time.tm_mday <= end_date.tm_mday){
+		    //XXX Use append here!
                     // append(near_notes, buffer);
                     if(near_notes == NULL){
                         near_notes = buffer;
@@ -118,7 +115,8 @@ void init_db(struct tm *local_time)
 void store_note(s_db_entry *note, struct tm *local_time)
 {
 
-
+    //XXX Not good... Consider using some global variables or something like that to store near_notes range...
+    //XXX Calculating near_notes range on each call - bad idea.
     struct tm start_date = *local_time;
     start_date.tm_year += 1900;
     start_date.tm_mon += 1;
@@ -139,7 +137,11 @@ void store_note(s_db_entry *note, struct tm *local_time)
     printf("START %d.%d\n", start_date.tm_mday, start_date.tm_year);
     printf("END %d.%d\n", end_date.tm_mday, end_date.tm_year);
 
+    //XXX Is it enough to compare only days? What if one start day is on April and end day is on May?
+    //XXX New note will not be added to the near_notes
     if(note->due_time.tm_mday >= start_date.tm_mday && note->due_time.tm_mday <= end_date.tm_mday){
+	//XXX It's okay but consider creating a function somewhere in list.c to duplicate the note.
+	//XXX s_db_entry *note_dup(s_db_entry *note); something like this
         s_db_entry *temp = malloc(sizeof(s_db_entry));
 
         // tmp = note;
@@ -176,7 +178,6 @@ void store_note(s_db_entry *note, struct tm *local_time)
     sprintf(filename, "%s%02d_%d", DB_DIR, note->due_time.tm_mon, note->due_time.tm_year);
     char file_hash[33];
     
-
     fp = fopen(filename, "r+");
     if(fp == NULL){
         // printf("ERROR OPEN FILE");
@@ -204,10 +205,13 @@ void store_note(s_db_entry *note, struct tm *local_time)
         return;
     }
 
+    //XXX This if is redundant! size is always more than 0 here! Remove next line of code
     if(size > 0){
         fseek(fp, 0, SEEK_SET);
         file_hash[0] = '\0';
         fgets(file_hash, sizeof(file_hash), fp);
+	//XXX CRITICAL ERROR! In get_note_list you will open file again!
+	//XXX Maybe, you have to pass fp to this function? To prevent double opening file...
         buffer = get_note_list(filename);
         out = hash_md5(buffer);
         // printf("HASH NEW FILES:  %s\n", out);
@@ -218,6 +222,7 @@ void store_note(s_db_entry *note, struct tm *local_time)
             append(&buffer, note);
         } else {
             free_memory(buffer);
+	    //XXX Be carefull! fclose before unlink!
             unlink(filename);
             fp = fopen(filename, "w");
             out = hash_md5(note);
@@ -244,7 +249,7 @@ void store_note(s_db_entry *note, struct tm *local_time)
     // printf("HASH NEW FILES ADD:  %s\n", out);
     
 
-
+    //XXX Use free_memory from list.c file!
     s_db_entry *tmp;
     while(buffer){
         save_file(buffer, fp);
@@ -312,12 +317,14 @@ char *hash_md5(s_db_entry *note){
     return hash_str;
 }
 
-
+//XXX As discribed above, consider passing FILE *fp to this function to prevent doulbe opening
 s_db_entry *get_note_list(char *filename){
+    //XXX Remove (perhaps) next line!
     FILE *fp = fopen(filename, "r");
     if(fp == NULL){
         perror("Error opening file");
         // exit(0);
+	//XXX Return NULL!
         return 0;
     }
 
@@ -325,6 +332,8 @@ s_db_entry *get_note_list(char *filename){
     s_db_entry *buffer_notes = NULL;
 
     // char *hash_str = NULL;
+    //XXX Magic number here! This function should get fp (FILE *) what already points to correct place of file
+    //XXX So, remove next line of code
     fseek(fp, 33, SEEK_SET);
     // printf("POS %ld\n", ftell(fp));
     // fgets(hash_str, 34, fp);
@@ -350,6 +359,7 @@ s_db_entry *get_note_list(char *filename){
         note->next = NULL;
 
         //XXX LIST Consider moving actions with list to separate file
+	//XXX Use append from list.c
         if(buffer_notes == NULL){
             buffer_notes = note;
         } else {

@@ -2,7 +2,7 @@
 
 // #define SIZE_FILENAME 50
 
-
+//XXX s_db_entry **list and s_db_entry *new_note will be more conveniente
 void append(s_db_entry **accepts, s_db_entry *head){
     if(!accepts){
         return;
@@ -18,7 +18,7 @@ void append(s_db_entry **accepts, s_db_entry *head){
     }
 }
 
-
+//XXX free_list will be more conveniente
 void free_memory(s_db_entry *head){
     s_db_entry *tmp;
     while(head){
@@ -26,9 +26,11 @@ void free_memory(s_db_entry *head){
         free(head);
         head = tmp;
     }
+    //XXX Redundant. head is local variable. No need to NULL it here. 
     head = NULL;
 }
 
+//XXX this file is not designed for working with file. Move this back to database.c
 void save_file(s_db_entry *note, FILE *fp){
 
     if(strlen(note->title) == 0 || strlen(note->body) == 0 || note->due_time.tm_year == 0){
