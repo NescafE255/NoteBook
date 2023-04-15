@@ -24,7 +24,7 @@ extern s_db_entry *near_notes, *buffer;
 
 
 
-void append(s_db_entry *accepts, s_db_entry *head);
+void append(s_db_entry **accepts, s_db_entry *head);
 void free_memory(s_db_entry *head);
 void save_file(s_db_entry *note, FILE *fp);
 void display_list(s_db_entry *note);

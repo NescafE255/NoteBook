@@ -36,18 +36,19 @@ void init_db(struct tm *local_time)
     start_date.tm_mday -= 5;
     start_date.tm_hour = 0;
     start_date.tm_min = 0; 
-    printf("DATE init start: %d.%d\n", start_date.tm_mon, start_date.tm_year);
+    printf("DATE init start: %d.%d.%d\n",start_date.tm_mday, start_date.tm_mon, start_date.tm_year);
     struct tm end_date = *local_time;
     end_date.tm_year += 1900;
     end_date.tm_mon += 1;
     end_date.tm_mday += 15;
     end_date.tm_hour = 0;
     end_date.tm_min = 0;
-    printf("DATE init end: %d.%d\n", end_date.tm_mon, end_date.tm_year);
+    printf("DATE init end: %d.%d.%d\n",end_date.tm_mday, end_date.tm_mon, end_date.tm_year);
 
 
     char *out;
     char filename[SIZE_FILENAME];
+    s_db_entry *buffer;
 
     for(int month = start_date.tm_mon; month <= end_date.tm_mon; month++){
         for(int year = start_date.tm_year; year <= end_date.tm_year; year++){
@@ -55,8 +56,8 @@ void init_db(struct tm *local_time)
             printf("***************\n");
             printf("%s\n", filename);
             FILE *fp;
-            near_notes = get_note_list(filename);
-            out = hash_md5(near_notes);
+            buffer = get_note_list(filename);
+            out = hash_md5(buffer);
 
 
             //need check here?????
@@ -83,6 +84,28 @@ void init_db(struct tm *local_time)
                 continue;
             }
 
+
+            // s_db_entry *tmp = buffer;
+            // near_notes = NULL;
+            while(buffer){
+                if(buffer->due_time.tm_mday >= start_date.tm_mday && buffer->due_time.tm_mday <= end_date.tm_mday){
+                    // append(near_notes, buffer);
+                    if(near_notes == NULL){
+                        near_notes = buffer;
+                    } else {
+                        s_db_entry *head = near_notes;
+                        while(head->next){
+                            head = head->next;
+                        }
+                        head = buffer;
+                    }
+                    // printf("append\n");
+                }
+
+                buffer = buffer->next;
+            }
+
+            // display_list(near_notes);
 
             OPENSSL_free(out);
             fclose(fp);
@@ -117,11 +140,28 @@ void store_note(s_db_entry *note, struct tm *local_time)
     printf("END %d.%d\n", end_date.tm_mday, end_date.tm_year);
 
     if(note->due_time.tm_mday >= start_date.tm_mday && note->due_time.tm_mday <= end_date.tm_mday){
-        s_db_entry *tmp = malloc(sizeof(s_db_entry));
-        tmp = note;
-        append(near_notes, tmp);
-        display_list(near_notes);
-        printf("Titel APPEND near_notes: %s\n ****\n", tmp->title);
+        s_db_entry *temp = malloc(sizeof(s_db_entry));
+
+        // tmp = note;
+        strcpy(temp->title, note->title);
+        strcpy(temp->body, note->body);
+        temp->due_time = note->due_time;
+        temp->next = NULL;
+        append(&near_notes, temp);
+        // display_list(near_notes);
+            // if(near_notes == NULL){
+            //     near_notes = tmp;
+            // } else {
+            //     s_db_entry *head = near_notes;
+            //     while(head->next){
+            //         head = head->next;
+            //     }
+            //     head = tmp;
+            // }
+            // display_list(near_notes);
+        printf("append");
+            
+        // printf("Titel APPEND near_notes: %s\n ****\n", note->title);
         // printf("LIST near_notes: %s\n ****\n", near_notes->title);
         // display_list(near_notes);
     }
@@ -175,7 +215,7 @@ void store_note(s_db_entry *note, struct tm *local_time)
 
         if(strcmp(file_hash, out) == 0){
             // printf("Title append  %s", note->title);
-            append(buffer, note);
+            append(&buffer, note);
         } else {
             free_memory(buffer);
             unlink(filename);

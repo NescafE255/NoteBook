@@ -234,7 +234,7 @@ int main(){
 
     init_db(present_time);
     while(1){
-        printf("%s", date_time);
+        printf("%s\n ******\n", date_time);
         display_list(near_notes);
         make_print();
         

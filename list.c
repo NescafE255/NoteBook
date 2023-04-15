@@ -3,11 +3,14 @@
 // #define SIZE_FILENAME 50
 
 
-void append(s_db_entry *accepts, s_db_entry *head){
-    if(accepts == NULL){
-        accepts = head;
+void append(s_db_entry **accepts, s_db_entry *head){
+    if(!accepts){
+        return;
+    }
+    if(*accepts == NULL){
+        *accepts = head;
     } else{
-        s_db_entry *tmp = accepts;
+        s_db_entry *tmp = *accepts;
         while(tmp->next){
             tmp = tmp->next;
         }
