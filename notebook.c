@@ -1,10 +1,15 @@
 #include "notebook.h"
 
 
+struct tm *global_time;
+// s_db_entry *buffer_notes;
+
+
+
 void add_note(){
 
     s_db_entry *new_note = malloc(sizeof(s_db_entry));
-    struct tm *present_time = getCurrentDateTime();
+    // global_time = getCurrentDateTime();
     printf("Введіть заголовок: ");
     fgets(new_note->title, sizeof(new_note->title), stdin);
 
@@ -52,7 +57,7 @@ void add_note(){
     // printf("%s\n", new_note->body);
     // printf("%02d%02d.%04d", new_note->due_time.tm_mday, new_note->due_time.tm_mon, new_note->due_time.tm_year);
 
-    store_note(new_note, present_time);
+    store_note(new_note, global_time);
     
 
     // free(new_note);
@@ -65,8 +70,7 @@ void add_note(){
 void show_plansCertainDay(){
     printf("Введіть дату (у форматі \"dd.mm.yyyy\"): ");
 
-    s_db_entry *buffer;
-    char input[50];
+    char input[SIZE_FILENAME];
     fgets(input, sizeof(input), stdin);
 
     int day, mon, year;
@@ -74,38 +78,44 @@ void show_plansCertainDay(){
     if(sscanf(input, "%d.%d.%d", &day, &mon, &year) != 3)
         printf("Помилка введення дати. Спробуйте ще раз.\n");
     
-    char filename[20];
+    char filename[SIZE_FILENAME];
     sprintf(filename, "%s%02d_%d", DB_DIR, mon, year);
     printf("%s\n", filename);
 
-    buffer = get_note_by_date(filename);
-    display_list(buffer);
-    free_memory(buffer);
+
+
+    if(buffer_notes == NULL){
+        buffer_notes = get_note_by_date(filename);
+        add_note_bufferOFmon(day, mon, year);
+    } else {
+        if(buffer_notes->due_time.tm_mon != mon){
+            free_list(buffer_notes);
+            buffer_notes = get_note_by_date(filename);
+        }
+        add_note_bufferOFmon(day, mon, year);
+    }
+    // free_list(buffer_notes);
     
 }
 
+void getCurrentDateTime(){
+    const time_t current_time = time(NULL);
+    global_time = localtime(&current_time);   
+}
+
+
 
 // void change_notes(){
-// 	//XXX Consider number here. Title is not userfrienldy
-//     int flag = 0;
-//     char name_changeNote[MAX_TITLE_SYMBOLS];
-    
-//     printf("Введіть заголовок який хочете змінити\n");
-//     fgets(name_changeNote, sizeof(name_changeNote), stdin);
+//     char input[SIZE_FILENAME];
+//     char filename[SIZE_FILENAME];
 
-//     for(int i = 0; i < num_notes; i++){
-// 	    //XXX Be careful! Case sensitive! consider using strcasecmp
-//         if(strcmp(notes[i].title, name_changeNote) == 0){
-//             char tmpTitle[MAX_TITLE_SYMBOLS];
-//             printf("Введіть новий заголовок: ");
-//             fgets(tmpTitle, sizeof(tmpTitle), stdin);
+//     printf("Введіть дату (у форматі \"dd.mm.yyyy\"): ");
+//     sprintf
 
-//             // if(chek_titel(name_changeNote) > 0){
-//             //     printf("Перевищено кількість спроб");
-//             //     sleep(1);
-//             //     return;
-//             // } else
-//             //     strcpy(notes[i].title, name_changeNote);
+//     int day, mon, year;
+//     sscanf(input, "%d.%d.%d", &day, &mon, &year);
+
+
 
 
 //             printf("Введіть текст: ");
@@ -171,20 +181,7 @@ void show_plansCertainDay(){
 
 
 
-struct tm *getCurrentDateTime(){
-    const time_t current_time = time(NULL);
-    struct tm *local_time = localtime(&current_time);
 
-    // local_time->tm_mon -= 1;
-    // local_time->tm_year -= 1900;
-
-
-    return local_time;
-    // char date_time[100];
-    // strftime(date_time, sizeof(date_time), "Date: %Y-%m-%d\nTime: %H:%M:%S\n", local_time);
-
-    // printf("%s", date_time);
-}
 
 
 void display(){
@@ -219,6 +216,8 @@ void make_print(){
             break;
         case 5:
             printf("Good bay!\n");
+            free_list(buffer_notes);
+            free_list(near_notes);
             exit(0);
         default:
             printf("ERRor");
@@ -227,20 +226,24 @@ void make_print(){
 
 
 int main(){
-    struct tm *present_time = getCurrentDateTime();
-
+    // global_time = getCurrentDateTime();
+    getCurrentDateTime();
     char date_time[100];
-    strftime(date_time, sizeof(date_time), "Date: %Y-%m-%d\nTime: %H:%M:%S\n", present_time);
+    strftime(date_time, sizeof(date_time), "Date: %Y-%m-%d\nTime: %H:%M:%S\n", global_time);
 
-    init_db(present_time);
+    printf("%s", asctime(global_time));
+    printf("%s\n ******\n", date_time);
+    init_db(global_time);
     while(1){
-        printf("%s\n ******\n", date_time);
-        display_list(near_notes);
+        // display_list(near_notes);
+        // display_list(buffer_notes);
         make_print();
         
 
 
     }
     
+
+    free_list(near_notes);
     return 0;
 }

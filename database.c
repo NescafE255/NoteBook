@@ -3,11 +3,12 @@
 
 // #define SIZE_FILENAME 50
 
-
-
+// struct tm global_tm = getCurrentDateTime();
 s_db_entry *near_notes = NULL;
+s_db_entry *buffer_notes;
+struct tm start_date;
+struct tm end_date;
     
-
 
 
 void init_db(struct tm *local_time)
@@ -27,85 +28,99 @@ void init_db(struct tm *local_time)
         printf("LOCAL TIME NULL");
         return;
     }
-    struct tm start_date = *local_time;
-    start_date.tm_year += 1900;
-    start_date.tm_mon += 1;
-    start_date.tm_mday -= 5;
-    start_date.tm_hour = 0;
-    start_date.tm_min = 0; 
-    printf("DATE init start: %d.%d.%d\n",start_date.tm_mday, start_date.tm_mon, start_date.tm_year);
-    struct tm end_date = *local_time;
-    end_date.tm_year += 1900;
-    end_date.tm_mon += 1;
-    end_date.tm_mday += 15;
-    end_date.tm_hour = 0;
-    end_date.tm_min = 0;
-    printf("DATE init end: %d.%d.%d\n",end_date.tm_mday, end_date.tm_mon, end_date.tm_year);
+
+    init_tm_date(local_time);
 
 
+    struct stat st;
+    int size;
     char *out;
     char filename[SIZE_FILENAME];
-    s_db_entry *buffer;
+    s_db_entry *buffer = NULL;
+
+
+
 
     for(int month = start_date.tm_mon; month <= end_date.tm_mon; month++){
         for(int year = start_date.tm_year; year <= end_date.tm_year; year++){
             sprintf(filename, "%s%02d_%d", DB_DIR, month, year);
-            printf("***************\n");
-            printf("%s\n", filename);
+            // printf("***************\n");
+            // printf("%s\n", filename);
             FILE *fp;
-            buffer = get_note_list(filename);
-            out = hash_md5(buffer);
 
 
             //need check here?????
             fp = fopen(filename, "r");
             if(fp == NULL){
+                printf("FILE ERROR");
+                continue;
+            }
+            stat(filename, &st);
+            size = st.st_size;
+            if(size == 0){
                 continue;
             }
 
+
             char info_hash[33];
             memset(info_hash, 0, sizeof(info_hash));
+            fseek(fp, 0, SEEK_SET);
             fgets(info_hash, sizeof(info_hash), fp);
+            fseek(fp, 33, SEEK_SET);
+            // printf("%ld", ftell(fp));
+            // if(buffer == NULL){
+            //     printf("BUFFER NULL\n");
+            // }
+            buffer = get_note_list(fp);
+            fclose(fp);
 
+            out = hash_md5(buffer);
 
+            // display_list(buffer);
             // printf("HASH STORY %s\n", info_hash);
             // printf("HASH NEW %s\n", out);
+
             if(strcmp(info_hash, out) != 0){
                 printf("The file is corrupted\n");
-		//XXX What will happen if near_notes contains notes from another month?
-		//XXX You will free it all. But you have to free only notes from this month...
-		//XXX Consider creating local list for each month and than merging it to common near_notes list.
-                free_memory(near_notes);
+                free_list(buffer);
                 OPENSSL_free(out);
                 continue;
             }
 
 
-            // s_db_entry *tmp = buffer;
-            // near_notes = NULL;
+
+
+            s_db_entry *current_mon_notes = NULL;
             while(buffer){
-                if(buffer->due_time.tm_mday >= start_date.tm_mday && buffer->due_time.tm_mday <= end_date.tm_mday){
+                // mktime(&buffer->due_time);
+                // printf("buffer day %d\n", buffer->due_time.tm_mday);
+                // printf("Strart day %d\n", start_date.tm_mday);
+                // printf("END day %d\n", end_date.tm_mday);
+                if(mktime(&buffer->due_time) >= mktime(&start_date) && mktime(&buffer->due_time) <= mktime(&end_date)){
 		    //XXX Use append here!
-                    // append(near_notes, buffer);
-                    if(near_notes == NULL){
-                        near_notes = buffer;
+
+                    if(current_mon_notes == NULL){
+                        current_mon_notes = buffer;
                     } else {
-                        s_db_entry *head = near_notes;
-                        while(head->next){
+                        s_db_entry *head = current_mon_notes;
+                        while(head){
+                            // display_list(head);
+                            // printf("TMP: %d.%d.%d\n", head->due_time.tm_mday, head->due_time.tm_mon, head->due_time.tm_year);
                             head = head->next;
                         }
                         head = buffer;
                     }
-                    // printf("append\n");
+                    // printf("NEAR: %s", buffer->title);
+                    // append(&current_mon_notes, buffer);
                 }
-
+                    // printf("TMP: %d.%d.%d\n", start_date.tm_mday, start_date.tm_mon, start_date.tm_year);
+                
                 buffer = buffer->next;
             }
 
-            // display_list(near_notes);
-
+            append(&near_notes, current_mon_notes);
+            free_list(buffer);
             OPENSSL_free(out);
-            fclose(fp);
         }
     }
 }
@@ -115,66 +130,26 @@ void init_db(struct tm *local_time)
 void store_note(s_db_entry *note, struct tm *local_time)
 {
 
-    //XXX Not good... Consider using some global variables or something like that to store near_notes range...
-    //XXX Calculating near_notes range on each call - bad idea.
-    struct tm start_date = *local_time;
-    start_date.tm_year += 1900;
-    start_date.tm_mon += 1;
-    start_date.tm_mday -= 5;
-    start_date.tm_hour = 0;
-    start_date.tm_min = 0; 
+    init_tm_date(local_time);
 
-    struct tm end_date = *local_time;
-    end_date.tm_year += 1900;
-    end_date.tm_mon += 1;
-    end_date.tm_mday += 15;
-    end_date.tm_hour = 0;
-    end_date.tm_min = 0;
+    // printf("DATE NOTE %d.%d.%d\n", note->due_time.tm_mday, start_date.tm_mon, note->due_time.tm_year);
+    // printf("START %d.%d.%d\n", start_date.tm_mday, start_date.tm_mon, start_date.tm_year);
+    // printf("END %d.%d.%d\n", end_date.tm_mday, end_date.tm_mon, end_date.tm_year);
 
-    // printf("Start mon %d\n", start_date.tm_mon);
-    // printf("END mon %d\n", end_date.tm_mon);
-    printf("DATE NOTE %d.%d\n", note->due_time.tm_mday, note->due_time.tm_year);
-    printf("START %d.%d\n", start_date.tm_mday, start_date.tm_year);
-    printf("END %d.%d\n", end_date.tm_mday, end_date.tm_year);
 
-    //XXX Is it enough to compare only days? What if one start day is on April and end day is on May?
-    //XXX New note will not be added to the near_notes
-    if(note->due_time.tm_mday >= start_date.tm_mday && note->due_time.tm_mday <= end_date.tm_mday){
-	//XXX It's okay but consider creating a function somewhere in list.c to duplicate the note.
-	//XXX s_db_entry *note_dup(s_db_entry *note); something like this
-        s_db_entry *temp = malloc(sizeof(s_db_entry));
+    
+    if(mktime(&note->due_time) >= mktime(&start_date) && mktime(&note->due_time) <= mktime(&end_date)){
 
-        // tmp = note;
-        strcpy(temp->title, note->title);
-        strcpy(temp->body, note->body);
-        temp->due_time = note->due_time;
-        temp->next = NULL;
-        append(&near_notes, temp);
-        // display_list(near_notes);
-            // if(near_notes == NULL){
-            //     near_notes = tmp;
-            // } else {
-            //     s_db_entry *head = near_notes;
-            //     while(head->next){
-            //         head = head->next;
-            //     }
-            //     head = tmp;
-            // }
-            // display_list(near_notes);
-        printf("append");
-            
-        // printf("Titel APPEND near_notes: %s\n ****\n", note->title);
-        // printf("LIST near_notes: %s\n ****\n", near_notes->title);
-        // display_list(near_notes);
+        s_db_entry *tmp = note_dup(note);
+        append(&near_notes, tmp);
     }
 
+    FILE *fp;
     s_db_entry *buffer = NULL;
     char *out;
     struct stat st;
-    FILE *fp;
     int size;
-    char filename[30];
-    //%s%02d_%d would be better. Spaces in file_name is evel +++
+    char filename[SIZE_FILENAME];
     sprintf(filename, "%s%02d_%d", DB_DIR, note->due_time.tm_mon, note->due_time.tm_year);
     char file_hash[33];
     
@@ -205,41 +180,34 @@ void store_note(s_db_entry *note, struct tm *local_time)
         return;
     }
 
-    //XXX This if is redundant! size is always more than 0 here! Remove next line of code
-    if(size > 0){
-        fseek(fp, 0, SEEK_SET);
-        file_hash[0] = '\0';
-        fgets(file_hash, sizeof(file_hash), fp);
-	//XXX CRITICAL ERROR! In get_note_list you will open file again!
-	//XXX Maybe, you have to pass fp to this function? To prevent double opening file...
-        buffer = get_note_list(filename);
-        out = hash_md5(buffer);
-        // printf("HASH NEW FILES:  %s\n", out);
-        // printf("HASH SAVE FILES: %s\n", file_hash);
+    fseek(fp, 0, SEEK_SET);
+    file_hash[0] = '\0';
+    fgets(file_hash, sizeof(file_hash), fp);
+    fseek(fp, 33, SEEK_SET);
+    buffer = get_note_list(fp);
+    out = hash_md5(buffer);
+    // printf("HASH NEW FILES:  %s\n", out);
+    // printf("HASH SAVE FILES: %s\n", file_hash);
 
-        if(strcmp(file_hash, out) == 0){
-            // printf("Title append  %s", note->title);
-            append(&buffer, note);
-        } else {
-            free_memory(buffer);
-	    //XXX Be carefull! fclose before unlink!
-            unlink(filename);
-            fp = fopen(filename, "w");
-            out = hash_md5(note);
-            printf("HASH NEW FILES ADD2:  %s\n", out);
-            // printf("Pos end out %ld", strlen(out));
-            fputs(out, fp);
-            fputs("\n", fp);
-            save_file(note, fp);
-            free(note);
-            fclose(fp);
-            OPENSSL_free(out);
-            return;
-        }
-
+    if(strcmp(file_hash, out) == 0){
+        // printf("Title append  %s", note->title);
+        append(&buffer, note);
+    } else {
+        free_list(buffer);
+        fclose(fp);
+        unlink(filename);
+        fp = fopen(filename, "w");
+        out = hash_md5(note);
+        // printf("HASH NEW FILES ADD2:  %s\n", out);
+        // printf("Pos end out %ld", strlen(out));
+        fputs(out, fp);
+        fputs("\n", fp);
+        save_file(note, fp);
+        free(note);
+        fclose(fp);
+        OPENSSL_free(out);
+        return;
     }
-
-
 
     out = NULL;
     out = hash_md5(buffer);
@@ -249,7 +217,7 @@ void store_note(s_db_entry *note, struct tm *local_time)
     // printf("HASH NEW FILES ADD:  %s\n", out);
     
 
-    //XXX Use free_memory from list.c file!
+    //XXX Use free_list from list.c file!
     s_db_entry *tmp;
     while(buffer){
         save_file(buffer, fp);
@@ -267,7 +235,7 @@ void store_note(s_db_entry *note, struct tm *local_time)
 char *hash_md5(s_db_entry *note){
 
     EVP_MD_CTX *mdctx;
-    char buf[MAX_TITLE_SYMBOLS + MAX_BODY_SYMBOLS + 11];
+    char buf[MAX_TITLE_SYMBOLS + MAX_BODY_SYMBOLS + MAX_NUMBER_DATE];
     size_t buf_size;
     s_db_entry *tmp;
     
@@ -281,8 +249,9 @@ char *hash_md5(s_db_entry *note){
   
     char date_time_str[SIZE_FILENAME];
     if(note == NULL){
-        printf("hash NOTE empty!");
+        // printf("hash NOTE empty!");
         //XXX return NULL here probably! At least no need to continue here!
+        return 0;
     }
 
     tmp = note;
@@ -291,15 +260,13 @@ char *hash_md5(s_db_entry *note){
                                                 tmp->due_time.tm_mon, 
                                                 tmp->due_time.tm_year);
         // printf("DATE in hash_md5: %s\n", date_time_str);
-        //XXX magic number! Use define instead of 11
-        buf_size = snprintf(buf, MAX_TITLE_SYMBOLS + MAX_BODY_SYMBOLS + 11, "%ld%ld%ld", strcspn(tmp->title, "\n"), strcspn(tmp->body, "\n"), strcspn(date_time_str, "\n"));
-        // strcspn(buf, "\n");
+        buf_size = snprintf(buf, MAX_TITLE_SYMBOLS + MAX_BODY_SYMBOLS + MAX_NUMBER_DATE, "%ld%ld%ld", strcspn(tmp->title, "\n"), strcspn(tmp->body, "\n"), strcspn(date_time_str, "\n"));
         EVP_DigestUpdate(mdctx, buf, buf_size);
         tmp = tmp->next;
     }
 
 
-    unsigned char hash_sum[MAX_TITLE_SYMBOLS + MAX_BODY_SYMBOLS + 11];
+    unsigned char hash_sum[MAX_TITLE_SYMBOLS + MAX_BODY_SYMBOLS + MAX_NUMBER_DATE];
     unsigned int hash_str_len = EVP_MD_size(EVP_md5());
 
     
@@ -312,32 +279,19 @@ char *hash_md5(s_db_entry *note){
         sprintf(&hash_str[i * 2], "%02x", hash_sum[i]);
     }
 
-    // hash_str[hash_str_len * 2] = '\n';
 
     return hash_str;
 }
 
-//XXX As discribed above, consider passing FILE *fp to this function to prevent doulbe opening
-s_db_entry *get_note_list(char *filename){
-    //XXX Remove (perhaps) next line!
-    FILE *fp = fopen(filename, "r");
+
+s_db_entry *get_note_list(FILE *fp){
     if(fp == NULL){
-        perror("Error opening file");
-        // exit(0);
-	//XXX Return NULL!
         return 0;
     }
 
 
-    s_db_entry *buffer_notes = NULL;
+    s_db_entry *buffer = NULL;
 
-    // char *hash_str = NULL;
-    //XXX Magic number here! This function should get fp (FILE *) what already points to correct place of file
-    //XXX So, remove next line of code
-    fseek(fp, 33, SEEK_SET);
-    // printf("POS %ld\n", ftell(fp));
-    // fgets(hash_str, 34, fp);
-    // printf("HASH get_note_list %s", hash_str);
 
     char line[MAX_BODY_SYMBOLS];
     while(fgets(line, sizeof(line), fp) != NULL){
@@ -358,45 +312,102 @@ s_db_entry *get_note_list(char *filename){
         note->due_time.tm_year = year;
         note->next = NULL;
 
-        //XXX LIST Consider moving actions with list to separate file
-	//XXX Use append from list.c
-        if(buffer_notes == NULL){
-            buffer_notes = note;
-        } else {
-            s_db_entry *head = buffer_notes;
-            while(head->next){
-                head = head->next;
-            }
-            head->next = note;
-        }
-        // free(note);
+        append(&buffer, note);
     }
     
-    fclose(fp);
-    return buffer_notes;
+    return buffer;
 }
 
+void add_note_bufferOFmon(int day, int mon, int year){
+        s_db_entry *tmp = buffer_notes;
+        while(tmp){
+            if(day == tmp->due_time.tm_mday && mon == tmp->due_time.tm_mon && year == tmp->due_time.tm_year){
+                s_db_entry *temp = note_dup(tmp);
+                display_list(temp);
+                free(temp);
+            }
+            tmp = tmp->next;
+        }
+}
 
 
 s_db_entry *get_note_by_date(char *filename)
 {
-    // struct tm today = *local_time;
-
+    s_db_entry *buffer;
+    char info_hash[33];
+    char *out;
     // char filename[SIZE_FILENAME];
     // sprintf(filename, "%s%02d_%d", DB_DIR, today.tm_mday, today.tm_year);
-
-    fopen(filename, "r");
-    return get_note_list(filename);
-    // display_list(buffer);
-    // free_memory(buffer);
+    FILE *fp = fopen(filename, "r");
+    fgets(info_hash, sizeof(info_hash), fp);
 
 
 
+    fseek(fp, 33, SEEK_SET);
+    buffer = get_note_list(fp);
+    out = hash_md5(buffer);
+    fclose(fp);
+
+    if(strcmp(info_hash, out) != 0){
+        printf("The file is corrupted\n");
+        free_list(buffer);
+        OPENSSL_free(out);
+        return 0;
+    }
+
+
+
+    return buffer;
     //IF time > localtime + 15 days  and buffer_notes contains data from another day
         //Store the day of date to buffer_notes
 }
 
 
+void init_tm_date(struct tm *local_time){
+
+    start_date = *local_time;
+    start_date.tm_year += 1900;
+    start_date.tm_mon += 1;
+    start_date.tm_mday -= 5;
+    mktime(&start_date);
+
+    // char start_data_str[SIZE_FILENAME];
+    // strftime(start_data_str, SIZE_FILENAME, "%d-%m-%Y", &start_date);
+    // printf("START DATE:%s\n", start_data_str);
+    // printf("DATE init start: %d.%d.%d\n",start_date.tm_mday, start_date.tm_mon, start_date.tm_year);
+  
+
+
+
+    end_date = *local_time;
+    end_date.tm_year += 1900;
+    end_date.tm_mon += 1;
+    end_date.tm_mday += 15;
+    mktime(&end_date);
+
+    // char end_date_str[SIZE_FILENAME];
+    // strftime(end_date_str, SIZE_FILENAME, "%d-%m-%Y", &end_date);
+    // printf("END DATE:%s\n", end_date_str);
+    // printf("DATE init end: %d.%d.%d\n",end_date.tm_mday, end_date.tm_mon, end_date.tm_year);
+
+}
+
+
+void save_file(s_db_entry *note, FILE *fp){
+
+    if(strlen(note->title) == 0 || strlen(note->body) == 0 || note->due_time.tm_year == 0){
+        printf("Error: Data not written to file - empty fields.\n");
+        fclose(fp);
+        return;
+    }
+    fputs(note->title, fp);
+    fputs(note->body, fp);
+
+    char date_time_str[SIZE_FILENAME];
+    sprintf(date_time_str, "%02d.%02d.%04d", note->due_time.tm_mday, note->due_time.tm_mon, note->due_time.tm_year);
+    fputs(date_time_str, fp);
+    fputs("\n", fp);
+}
 
 // s_db_entry *get_note_by_title(const char *title)
 // {

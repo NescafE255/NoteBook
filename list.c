@@ -1,25 +1,22 @@
 #include "list.h"
 
-// #define SIZE_FILENAME 50
 
-//XXX s_db_entry **list and s_db_entry *new_note will be more conveniente
-void append(s_db_entry **accepts, s_db_entry *head){
-    if(!accepts){
+void append(s_db_entry **list, s_db_entry *new_note){
+    if(!list){
         return;
     }
-    if(*accepts == NULL){
-        *accepts = head;
+    if(*list == NULL){
+        *list = new_note;
     } else{
-        s_db_entry *tmp = *accepts;
+        s_db_entry *tmp = *list;
         while(tmp->next){
             tmp = tmp->next;
         }
-        tmp->next = head;
+        tmp->next = new_note;
     }
 }
 
-//XXX free_list will be more conveniente
-void free_memory(s_db_entry *head){
+void free_list(s_db_entry *head){
     s_db_entry *tmp;
     while(head){
         tmp = head->next;
@@ -27,25 +24,10 @@ void free_memory(s_db_entry *head){
         head = tmp;
     }
     //XXX Redundant. head is local variable. No need to NULL it here. 
-    head = NULL;
+    // head = NULL;
 }
 
-//XXX this file is not designed for working with file. Move this back to database.c
-void save_file(s_db_entry *note, FILE *fp){
 
-    if(strlen(note->title) == 0 || strlen(note->body) == 0 || note->due_time.tm_year == 0){
-        printf("Error: Data not written to file - empty fields.\n");
-        fclose(fp);
-        return;
-    }
-    fputs(note->title, fp);
-    fputs(note->body, fp);
-
-    char date_time_str[SIZE_FILENAME];
-    sprintf(date_time_str, "%02d.%02d.%04d", note->due_time.tm_mday, note->due_time.tm_mon, note->due_time.tm_year);
-    fputs(date_time_str, fp);
-    fputs("\n", fp);
-}
 
 void display_list(s_db_entry *note){
     s_db_entry *tmp = note;
@@ -58,4 +40,16 @@ void display_list(s_db_entry *note){
         printf("\n");
         tmp = tmp->next;
     }
+}
+
+
+s_db_entry *note_dup(s_db_entry *note){
+    s_db_entry *temp = malloc(sizeof(s_db_entry));
+    // tmp = note;
+    strcpy(temp->title, note->title);
+    strcpy(temp->body, note->body);
+    temp->due_time = note->due_time;
+    temp->next = NULL;
+    return temp;
+
 }
