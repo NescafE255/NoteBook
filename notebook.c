@@ -31,10 +31,14 @@ void add_note(){
                 // printf("SUPER");
             } else {
                 printf("Error enter date");
+		//XXX Memleak here. Malloced new_note will not be free. Use goto here.
+		//XXX goto end;
                 return;
             }
     } else {
         printf("format is not correct");
+	//XXX Memleak here. Malloced new_note will not be free. Use goto here.
+	//XXX goto end;
         return;
     }
 
@@ -57,6 +61,9 @@ void add_note(){
 
     // free(new_note);
     printf("Запис додано!\n");
+    return;
+//end:
+ //   free(new_note);
 }
 
 

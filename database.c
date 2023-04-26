@@ -64,8 +64,6 @@ void init_db(struct tm *local_time)
             fp = fopen(filename, "r");
             if(fp == NULL){
                 // perror("Error opening file");
-                //XXX Why do you exit here? And this perror is redundant. User may not have notes at all.
-                //XXX It does not mean that we have to exit! Just continue the loop
                 // exit(0);
                 continue;
             }
@@ -87,8 +85,11 @@ void init_db(struct tm *local_time)
 
             s_db_entry *tmp = buffer;
             while(tmp){
+		//XXX Issue here! WHat if start day is 20.03 and end day is 04.04? this code will not work.
+		//XXX You have to encounter month  here
                 if(tmp->due_time.tm_mday >= start_date.tm_mday && tmp->due_time.tm_mday <= end_date.tm_mday){
                     // append(near_notes, tmp);
+		    // XXX LIST use list.c. instead of this block
                     if(near_notes == NULL){
                         near_notes = tmp;
                     } else {
@@ -164,6 +165,7 @@ void store_note(s_db_entry *note, struct tm *local_time)
     char *out;
     struct stat st;
     FILE *fp;
+    //XXX unsigned int size; or size_t size; there should be unsigned value
     int size;
     char filename[30];
     //%s%02d_%d would be better. Spaces in file_name is evel +++
@@ -198,6 +200,7 @@ void store_note(s_db_entry *note, struct tm *local_time)
         return;
     }
 
+    //XXX remove this if. IT is no needed, you already checked if size is 0. It cannot be lower than zero
     if(size > 0){
         fseek(fp, 0, SEEK_SET);
         file_hash[0] = '\0';
@@ -213,6 +216,7 @@ void store_note(s_db_entry *note, struct tm *local_time)
         } else {
             free_memory(buffer);
             unlink(filename);
+	    //XXX fclose ?
             fp = fopen(filename, "w");
             out = hash_md5(note);
             printf("HASH NEW FILES ADD2:  %s\n", out);
@@ -229,7 +233,7 @@ void store_note(s_db_entry *note, struct tm *local_time)
     }
 
 
-
+    //XXX Redundant! out will be replaced in next line
     out = NULL;
     out = hash_md5(buffer);
     rewind(fp);
@@ -240,6 +244,7 @@ void store_note(s_db_entry *note, struct tm *local_time)
 
 
     s_db_entry *tmp;
+    //XXX Consider moving this block to separate function in list.c (store_list_to_file);
     while(buffer){
         save_file(buffer, fp);
         tmp = buffer->next;
@@ -361,7 +366,8 @@ s_db_entry *get_note_list(char *filename){
 }
 
 
-
+//XXX get_note_by_date gets filename as a argument?
+//XXX No, no, no. nobody knows how database stores notes. So, you have to pass date here, not filename
 s_db_entry *get_note_by_date(char *filename)
 {
     // struct tm today = *local_time;
