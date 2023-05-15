@@ -1,4 +1,8 @@
 #include "database.h"
+#include "logger.h"
+
+
+// extern struct tm *global_time;
 
 
 void add_note();
