@@ -6,10 +6,20 @@
 struct tm global_time;
 
 
+/* XXX My consideration (need to be moved to log.c) Do not forget to update .gitignore file
+#define LOG_FILE "logs.txt"
+FILE *flog;
+void init_logger()
+{
+	flog = fopen(LOG_FILE, "a+");
+}
+#define LOG(fmt, ...) do { fprintf(flog, "%s %s %s:%d: " fmt "\n", __DATE__, __TIME__, __FILE__, __LINE__, ##__VA_ARGS__); } while (0)
+*/
 
 void add_note(){
 
-
+    //XXX BAD APPROACH CONSTRUCTING LOGS! Consider using define (above)
+    //XXX LOG("What a fuck is going on?");
     struct save_log save_log;// = malloc(sizeof(save_log));
 
     s_db_entry *new_note = malloc(sizeof(s_db_entry));
@@ -20,6 +30,7 @@ void add_note(){
     printf("Введіть текст запису: ");
     fgets(new_note->body, sizeof(new_note->body), stdin);
 
+    //XXX LOG("What are you doing here? %s", new_note->body);
     printf("Введіть дату та час, коли потрібно нагадати (у форматі \"dd.mm.yyyy\"): ");
     char input[MAX_NUMBER_DATE];
 
@@ -185,6 +196,7 @@ void make_print(){
 void date_init(){
     db_init_date();
 
+    //XXX WHY? ONLY FUNCTIONS! NO VARIABLES! notebook.c and database.c should communicate via function ONLY!
     global_time = real_date;
     global_time.tm_mon -= 1;
     global_time.tm_year -= 1900;
@@ -200,10 +212,13 @@ void date_init(){
 
 
 int main(){
+    //XXX This function is redundant. All off the logic may be done in the init_db function
     date_init();
-    init_log_file();
+    //init_log_file();
     
     init_db(&global_time);
+    
+    init_logger();
     while(1){
         display_list(near_notes);
         // display_list(buffer_notes);
