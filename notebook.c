@@ -59,8 +59,8 @@ void add_note(){
     save_log.due_time = new_note->due_time;
 
 
-    write_log(&save_log);
-    store_note(new_note);
+    // write_log(&save_log);
+    // store_note(new_note);
     
 
     // free(new_note);
@@ -83,7 +83,7 @@ void show_plansCertainDay(){
 
 
 
-    get_note_by_date(&date);
+    // get_note_by_date(&date);
     
 }
 
@@ -144,7 +144,7 @@ void deleteNote(){
 
 
     //XXX MICHAEL pass struct tm * here
-    db_delete_note(&date);
+    // db_delete_note(&date);
     printf("Нотатка видалена\n");
 }
 
@@ -211,22 +211,22 @@ void date_init(){
 
 
 
-int main(){
-    //XXX This function is redundant. All off the logic may be done in the init_db function
-    date_init();
-    //init_log_file();
+// int main(){
+//     //XXX This function is redundant. All off the logic may be done in the init_db function
+//     date_init();
+//     //init_log_file();
     
-    init_db(&global_time);
+//     run_server();
+//     init_db(&global_time);
+//     // init_logger();
+//     while(1){
+//         display_list(near_notes);
+//         // display_list(buffer_notes);
+//         make_print();
     
-    init_logger();
-    while(1){
-        display_list(near_notes);
-        // display_list(buffer_notes);
-        make_print();
-    
-    }
+//     }
     
 
-    // free_list(near_notes);
-    return 0;
-}
+//     // free_list(near_notes);
+//     return 0;
+// }

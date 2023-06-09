@@ -1,4 +1,4 @@
-#ifndef LOGGER
+// #ifndef LOGGER
 #define LOGGER
 #include <stdio.h>
 #include <time.h>
@@ -29,4 +29,4 @@ void write_log(struct save_log *save_log);
 void write_debug_log(const char *message, ...);
 // void get_current_time(char *out);
 // void init_debug_log(s_db_entry *entry);
-#endif
+// #endif

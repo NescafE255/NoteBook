@@ -1,3 +1,4 @@
+// #ifndef DATABASE
 #include <errno.h>
 #include <unistd.h>
 #include <sys/stat.h>
@@ -30,3 +31,4 @@ char *hash_md5(s_db_entry *note);
 s_db_entry *get_note_list(FILE *fp);
 
 
+// #endif

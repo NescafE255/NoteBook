@@ -1,7 +1,8 @@
-#include <stdio.h>
-#include <stdlib.h>
+// #ifndef LIST
 #include <string.h>
 #include <time.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 
 #define SIZE_FILENAME 30
@@ -32,3 +33,5 @@ void free_list(s_db_entry *head);
 void display_list(s_db_entry *note);
 void delete_note_by_date(s_db_entry **list, s_db_entry *delete_note);
 s_db_entry *note_dup(s_db_entry *note);
+
+// #endif
