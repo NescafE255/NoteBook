@@ -57,44 +57,16 @@ void db_init_date()
 
 
 
-int db_init(char *filename)
+int return_Size_filename(char *filename)
 {
-
-
-    DIR *dir = opendir(DB_DIR);
-    if (dir == NULL){
-        int ok = mkdir(DB_DIR, 0777);
-        if (ok == 0){
-            printf("MKDIR APPEND\n");
-        } else {
-            perror("FAIL MKDIR\n");
-            return -1;
-        }
-    }
-    closedir(dir);
-
-
     struct stat st;
-    int size_file;
-
-    if (stat(filename, &st) == 0){
-        size_file = st.st_size;
-    } else {
-        FILE *file = fopen(filename, "w");
-        if (file == 0){
-            perror("FAILD OPEN FILE\n");
-            return -1;
-        }
-        fclose(file);
-        size_file = 0;
-        // return size_file;
+    // stat(filename, &st);
+    if ((stat(filename, &st) == -1)){
+        return -1;
     }
-    
-    // size_file = st.st_size;
-
-    printf("%d\n" ,size_file);
-    return size_file;
+    return st.st_size;
 }
+
 
 
 
@@ -131,9 +103,12 @@ int db_check_hash (FILE *fp, s_db_entry *notes)
 
 
 
-void init_db(struct tm *local_time)
+void loading_near_notes()
 {
     // fill near_notes; localtime - 5 days < ---- > local_time + 15 days
+
+    db_init_date();
+
     DIR *dir = opendir(DB_DIR);
     if(dir == NULL){
         perror("Error opening dir");
@@ -141,18 +116,8 @@ void init_db(struct tm *local_time)
     }
     closedir(dir);
 
-    // db_init_date();
-    if(local_time == NULL){
-        printf("LOCAL TIME NULL");
-        return;
-    }
-    printf("%d.%d.%d\n", real_date.tm_mday, real_date.tm_mon, real_date.tm_year);
-    printf("%d.%d.%d\n", start_date.tm_mday, start_date.tm_mon, start_date.tm_year);
-    printf("%d.%d.%d\n", end_date.tm_mday, end_date.tm_mon, end_date.tm_year);
 
-    struct stat st;
-    int size;
-    // char *out;
+    int size ;
     char filename[SIZE_FILENAME];
     s_db_entry *buffer = NULL;
 
@@ -171,22 +136,14 @@ void init_db(struct tm *local_time)
                 // printf("FILE ERROR\n");
                 continue;
             }
-            stat(filename, &st);
-            size = st.st_size;
+            size = return_Size_filename(filename);
             if(size == 0){
                 // printf("SIZE NULL\n");
                 continue;
             }
-            // memset(info_hash, 0, sizeof(info_hash));
             
-            
-            
-            // char info_hash[33];
-            // fseek(fp, 0, SEEK_SET);
-            // fgets(info_hash, sizeof(info_hash), fp);
             fseek(fp, 33, SEEK_SET);
             buffer = get_note_list(fp);
-            // out = hash_md5(buffer);
 
            if (db_check_hash(fp, buffer) != 0){
                 // free_list(buffer);
@@ -199,9 +156,6 @@ void init_db(struct tm *local_time)
 
             fclose(fp);
 
-
-
-
             while(buffer){
 
                 db_update_near_notes(buffer);
@@ -210,7 +164,7 @@ void init_db(struct tm *local_time)
 
             // display_list(near_notes);
 
-            free_list(buffer);
+            // free_list(buffer);
             // OPENSSL_free(out);
         }
     }
@@ -256,12 +210,15 @@ void store_note(s_db_entry *note)
 
     
     // memset(out, 0, SIZE_HASH);
-    int size = db_init(filename);
+    int size = return_Size_filename(filename);
     FILE *fp = fopen(filename, "r+");
-    // if (out != NULL){
-    //     printf("OUT == NULL\n");
-    //     OPENSSL_free(out);
-    // }
+    if (fp == NULL){
+        fp = fopen(filename, "w+");
+        if(fp == NULL){
+            perror("Помилка створення файлу!");
+            exit(EXIT_FAILURE);
+        }
+    }
 
     // assert(out);
 
@@ -275,14 +232,12 @@ void store_note(s_db_entry *note)
         // memset(out, 0, SIZE_HASH);
         // OPENSSL_free(out);
         // out = NULL;
-        free(note);
+        // free(note);
         note = NULL;
         fclose(fp);
         return;
     }
 
-    // fseek(fp, 0, SEEK_SET);
-    // fgets(infohash, sizeof(infohash), fp);
     fseek(fp, 33, SEEK_SET);
     buffer = get_note_list(fp);
     // out = hash_md5(buffer);
@@ -291,19 +246,19 @@ void store_note(s_db_entry *note)
 
 
     if(db_check_hash(fp, buffer) == 0){
-        printf("ADD NEW NOTE\n");
+        // printf("ADD NEW NOTE\n");
 
         s_db_entry *temp = note_dup(note);
 
-        printf("ADD NEW NOTE2\n");
+        // printf("ADD NEW NOTE2\n");
 
         append(&buffer, temp);
 
-        printf("ADD NEW NOTE3\n");
+        // printf("ADD NEW NOTE3\n");
 
         db_update_near_notes(note);
 
-        printf("ADD NEW NOTE4\n");
+        // printf("ADD NEW NOTE4\n");
 
         // OPENSSL_free(out);
         // if (out != NULL){
@@ -317,9 +272,6 @@ void store_note(s_db_entry *note)
         fclose(fp);
         printf("FILE VBYT\n");
 
-        // free_list(near_notes);
-        // near_notes = NULL;
-
 
         fp = fopen(filename, "w+");
         if (fp == NULL){
@@ -327,7 +279,6 @@ void store_note(s_db_entry *note)
         } else {
             printf("GOOD!\n");
         }
-        // assert(out);
 
 
 
@@ -335,14 +286,9 @@ void store_note(s_db_entry *note)
         fputs(out, fp);
         fputs("\n", fp);
         save_file(note, fp);
-        printf("to db_update");
         db_update_near_notes(note);
-        printf("old db_update");
-        free(note);
-        // free_list(buffer);
+        // free(note);
         fclose(fp);
-        // OPENSSL_free(out);
-        // out = NULL;
         return;
     }
 
@@ -468,26 +414,24 @@ s_db_entry *get_note_list(FILE *fp){
 
 
 
-void get_note_by_date(struct tm *date)
+s_db_entry *get_note_by_date(s_db_entry *date)
 {
     s_db_entry *buffer = NULL;
+    s_db_entry *tmp = NULL;
     FILE *fp;
-
 
     // char infohash[SIZE_HASH];
     char filename[SIZE_FILENAME];
-    sprintf(filename, "%s%02d_%d", DB_DIR, date->tm_mon, date->tm_year);
+    sprintf(filename, "%s%02d_%d", DB_DIR, date->due_time.tm_mon, date->due_time.tm_year);
 
 
-    int size = db_init(filename);
-
-    if (size == 0){
+    int size = return_Size_filename(filename);
+    // printf("%d\n", size);
+    if (size <= 0){
         printf("Записів за цей місяць не знайдено");
-        return;
     }
 
     fp = fopen(filename, "r");
-    // fgets(infohash, sizeof(infohash), fp);
 
     fseek(fp, 33, SEEK_SET);
     buffer = get_note_list(fp);
@@ -497,22 +441,20 @@ void get_note_by_date(struct tm *date)
         // near_notes = NULL;
         remove(filename);
         fclose(fp);   
-        return;
     }
     fclose(fp);
-
-
-    // s_db_entry *tmp = buffer_notes;
-    while(buffer){
-        if(date->tm_mday == buffer->due_time.tm_mday &&
-            date->tm_mon == buffer->due_time.tm_mon &&
-            date->tm_year == buffer->due_time.tm_year){
-            display_list(buffer);
+    s_db_entry *bufferTmp = buffer;
+    s_db_entry *temp = NULL;
+    while(bufferTmp){
+        if(date->due_time.tm_mday == bufferTmp->due_time.tm_mday){
+            temp = note_dup(bufferTmp);
+            append(&tmp, temp);
         }
-        buffer = buffer->next;
+        bufferTmp = bufferTmp->next;
     }
-
     free_list(buffer);
+    
+    return tmp;
 }
 
 
@@ -537,6 +479,95 @@ void save_file(s_db_entry *note, FILE *fp){
 }
 
 
+char *db_delete_note(int number, s_db_entry *note)
+{
+    s_db_entry *buffer = NULL;
+    s_db_entry *buffer_del = NULL;
+    char filename[SIZE_FILENAME];
+    char *get = (char *)malloc(MAX_BODY_SYMBOLS);
+
+    sprintf(filename, "%s%02d_%d", DB_DIR, note->due_time.tm_mon, note->due_time.tm_year);
+
+
+    FILE *fp = fopen(filename, "r");
+    if (fp == NULL){
+        perror("error opening file");
+        // return;
+        exit(EXIT_FAILURE);
+    }
+
+
+    fseek(fp, 33, SEEK_SET);
+    buffer = get_note_list(fp);
+
+    fclose(fp);
+
+    int count = 0;
+    s_db_entry *tmp = buffer;
+    while(tmp){
+        if (tmp->due_time.tm_mday == note->due_time.tm_mday){
+            s_db_entry *temp = note_dup(tmp);
+            append(&buffer_del, temp);
+            count++;
+        }
+        tmp = tmp->next;
+    }
+
+    if(buffer_del == NULL){
+        // printf("За цією датую запису не знайдено\n");
+        free_list(buffer);
+        sprintf(get, "%s", "За цією датую запису не знайдено");
+        return get;
+    }
+
+    if(count == 1){
+            // printf("%s%s%s", BLUE, buffer->title, NC);
+            // printf("%s%s%s", BLUE, near_notes->title, NC);
+            delete_note_by_date(&near_notes, buffer_del);
+            delete_note_by_date(&buffer, buffer_del);
+
+    } else {
+        // printf("Обереть нагадування для видалення: ");
+        // scanf("%d", &choice);
+        tmp = buffer_del;
+        for(int i = 1; i < number; i++){
+            tmp = tmp->next;
+        }
+        delete_note_by_date(&near_notes, tmp);
+        delete_note_by_date(&buffer, tmp);
+    }
+
+    // if (buffer == NULL){
+    //     // printf("zfwhauieqlasdfl\n");
+    //     remove(filename);
+    //     free_list(buffer);
+    //     return;
+    // }
+
+
+    char *hash;
+    hash = hash_md5(buffer);
+    fp = fopen(filename, "w+");
+    fputs(hash, fp);
+    fputs("\n", fp);
+    tmp = buffer;
+    while(tmp){
+        save_file(tmp, fp);
+        tmp = tmp->next;
+    }
+    fclose(fp);
+
+    OPENSSL_free(hash);
+    free_list(buffer);
+    
+    // buffer_del = NULL;
+    // buffer = NULL;
+    sprintf(get, "%s", "Запис видалено!");
+    return get;
+}
+
+
+/*
 
 void db_delete_note(struct tm *date){
     // char *hash;
@@ -554,7 +585,7 @@ void db_delete_note(struct tm *date){
         perror("error opening file");
         return;
     }
-
+    
     // fgets(infohash, sizeof(infohash), fp);
     fseek(fp, 33, SEEK_SET);
     buffer = get_note_list(fp);
@@ -569,19 +600,19 @@ void db_delete_note(struct tm *date){
     fclose(fp);
 
 
+
     int choice;
     int count = 0;
 
     s_db_entry *tmp = buffer;
     while(tmp){
-        if(tmp->due_time.tm_mday == date->tm_mday &&
-            tmp->due_time.tm_mon == date->tm_mon && 
-            tmp->due_time.tm_year == date->tm_year){
+        if (tmp->due_time.tm_mday ==  date->tm_mday){
                 printf("%d. %s%s%02d:%02d:%04d\n", count + 1, tmp->title, tmp->body, tmp->due_time.tm_mday, tmp->due_time.tm_mon, tmp->due_time.tm_year);
                 printf("\n");
                 s_db_entry *temp = note_dup(tmp);
                 append(&buffer_del, temp);
                 count++;
+                // delete_note_by_date();
         }
         tmp = tmp->next;
     }
@@ -638,3 +669,5 @@ void db_delete_note(struct tm *date){
     // buffer_del = NULL;
     // buffer = NULL;
 }
+
+*/

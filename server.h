@@ -1,9 +1,7 @@
-// #ifndef SERVER
-// #define SERVER
+#ifndef SERVER
+#define SERVER
 
-// #include "database.h"
-// #include "list.h"
-#include "notebook.h"
+#include "database.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -29,9 +27,10 @@ enum requestMethod {
 
 void run_server();
 void *clientHandler(void *arg);
-void handleRequest(char *requst);
+char *creatingRequest(enum requestMethod method, s_db_entry *note);
+s_db_entry *handleRequest(char *request);
 enum requestMethod getRequestMethod(char *requst);
 
 
 
-// #endif
+#endif

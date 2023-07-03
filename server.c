@@ -1,32 +1,88 @@
 #include "server.h"
-// #include "notebook.h"
+#define BUFFER_SIZE 2048
 
 
 enum requestMethod getRequestMethod(char *request){
-    if (strncmp(request, "STORE", 5))
+    if (strncmp(request, "STORE", 5) == 0)
         return STORE;
-    else if (strncmp(request, "GET", 3))
+    else if (strncmp(request, "GET", 3) == 0)
         return GET;
-    else if (strncmp(request, "RENAME", 6))
+    else if (strncmp(request, "RENAME", 6) == 0)
         return RENAME;
-    else if (strncmp(request, "DELETE", 6))
+    else if (strncmp(request, "DELETE", 6) == 0)
         return DELETE;
     else
         return UNKNOWN;
 }
 
-void handleRequest(char *request){
-    char words[4][MAX_BODY_SYMBOLS];
-    int numWords = 0;
-    s_db_entry *note = (s_db_entry *)malloc(sizeof(s_db_entry));
 
-    char *str = strtok(request, " ");
-    printf("STR: %s\n", str);
-    enum requestMethod method = getRequestMethod(request);
-    printf("method %d\n", method);
+
+char *returnGet(s_db_entry *note){
+
+    char *get = (char *)malloc(2048);
+    char *sprintfNote = (char *)malloc(2048);
+    while (note){
+        sprintf(sprintfNote, "%s%s%d.%d.%d", note->title, note->body, note->due_time.tm_mday, note->due_time.tm_mon, note->due_time.tm_year);
+        strcat(get, sprintfNote);
+        strcat(get, "\n");
+        note = note->next;
+    }
+
+
+    free(sprintfNote);
+    return get;
+}
+
+
+char *creatingRequest(enum requestMethod method, s_db_entry *note){
+    char *get = malloc(2048);
+    s_db_entry *tmp = NULL;
+    char *request = NULL;
+    // s_db_entry 
+
+
+    switch (method) {
+    case STORE:
+        // printf("case: STORE\n");
+        store_note(note);
+        get = "Запис додано!\n";
+        break;
+    case GET:
+        // printf("case: GET\n");
+        tmp = get_note_by_date(note);
+        request = returnGet(tmp);
+        sprintf(get, "%s%s", "GET\n", request);
+        break;
+    case RENAME:
+        break;
+    case DELETE:
+        // printf("case: DELETE\n");
+        tmp = get_note_by_date(note);
+        request = returnGet(tmp);
+        sprintf(get, "%s%s", "DELETE\n", request);
+        break;
+    case UNKNOWN:
+        perror("request bad");
+        break;
+    }
+    free(tmp);
+    free(request);
+    return get;
+}
+
+
+s_db_entry *handleRequest(char *request){
+    char words[4][MAX_BODY_SYMBOLS];
+    s_db_entry *note = (s_db_entry *)malloc(sizeof(s_db_entry));
+    int numWords = 0;
+
+
+    char *str = strtok(request, "\n");
+    // printf("method %d\n", method);
 
     while(str != NULL && numWords <= 3){
         int lenWord = strlen(str);
+        // printf("%s\n", str);
         memset(words[numWords], 0, MAX_BODY_SYMBOLS - 1);
         if (lenWord > MAX_BODY_SYMBOLS)
             strncpy(words[numWords], str, MAX_BODY_SYMBOLS - 1);
@@ -34,14 +90,7 @@ void handleRequest(char *request){
             strncpy(words[numWords], str, lenWord);
         
         numWords++;
-        str = strtok(NULL, " ");
-    }
-
-
-    int count = 0;
-    while(count <= 3){
-        printf("%s\n", words[count]);
-        count++;
+        str = strtok(NULL, "\n");
     }
 
 
@@ -52,68 +101,74 @@ void handleRequest(char *request){
     strcat(note->body, "\n");
     sscanf(words[3], "%d.%d.%d", &note->due_time.tm_mday, &note->due_time.tm_mon, &note->due_time.tm_year);
     note->next = NULL;
-
-    display_list(note);
-
-    switch (method) {
-        case STORE:
-            // add_note();
-            printf("case: STORE\n");
-            store_note(note);
-            break;
-        case GET:
-            // show_plansCertainDay();
-            struct tm *data = malloc(sizeof(data));
-            data->tm_mday = note->due_time.tm_mday;
-            data->tm_mon = note->due_time.tm_mon;
-            data->tm_year = note->due_time.tm_year;
-
-            get_note_by_date(data);
-            free(data);
-            break;
-        case RENAME:
-            break;
-        case DELETE:
-            // deleteNote();
-            struct tm *date = malloc(sizeof(date));
-            date->tm_mday = note->due_time.tm_mday;
-            date->tm_mon = note->due_time.tm_mon;
-            date->tm_year = note->due_time.tm_year;
-
-            db_delete_note(date);
-            free(date);
-            break;
-        case UNKNOWN:
-            perror("request bad");
-            break;
-    }
-
-    free(note);
+    // if (str != NULL || numWords < 4){
+    //     printf("STR == NULL");
+    // }
+    // printf("HandleRE %d:%d:%d\n", note->due_time.tm_mday, note->due_time.tm_mon, note->due_time.tm_year);
+    // free(note);
+    return note;
 }
 
 
 
 void *clientHandler(void *arg){
     int clientSocket = *((int *) arg);
-    char buffer[2048] = {0};
+    char buffer[BUFFER_SIZE] = {0};
+    s_db_entry *note = NULL;
+    char *messange;
+    int number = 0;
+    // int byteread;
+
+
+    loading_near_notes();
+    buffer = *returnGet(near_notes);
+    if (recv(clientSocket, buffer, sizeof(int), 0) == -1){
+        perror("error recv");
+        exit(EXIT_FAILURE);
+    }
+    memset(buffer, 0, BUFFER_SIZE);
 
     int bytesRead;
     while((bytesRead = read(clientSocket, buffer, sizeof(buffer)))){
+        // printf("Read bytes: %d\n", bytesRead);
+        buffer[bytesRead] = '\0';
+        // printf("Read buffer: %s\n", buffer);
         if (bytesRead <= 0){
             // close(clientSocket);
             break;
         }
-        // char *methodrequ = buffer;
-        // char *meth = strtok(methodrequ, " ");
-        // printf("BUFFER: %s\n", meth);
-        // printf("BUFFER: %s\n", buffer);
-        
+        enum requestMethod method = getRequestMethod(buffer);
+        note = handleRequest(buffer);
+        messange = creatingRequest(method, note);
+        printf("masenge: %s\n", messange);
 
-        // enum requestMethod method = getRequestMethod(buffer);
-        handleRequest(buffer); 
+        if(send(clientSocket, messange, strlen(messange) - 1, 0) == -1){
+            perror("failed send to client");
+            exit(EXIT_FAILURE);
+        }
+
+
+        if (method == DELETE){
+           if (recv(clientSocket, &number, sizeof(int), 0) == -1){
+                perror("error recv");
+                exit(EXIT_FAILURE);
+           }
+            char *mem = db_delete_note(number, note);
+            // printf("NUMBER %d\n", number);
+
+            if (send(clientSocket, mem, strlen(mem), 0) == -1){
+                perror("failed send to client number");
+                exit(EXIT_FAILURE);
+            }
+
+        }
     }
+
     
-    close(clientSocket);
+    // close(clientSocket);
+    // free(messange);
+    free(messange);
+    free(note);
     return NULL;
 }
 
@@ -148,7 +203,13 @@ void run_server(){
 
     printf("Starting server\n");
 
-    int clientCount = 0;
+ 
+        if ((listen(socket_server, 5))){
+            perror("Faild listen");
+            exit(EXIT_FAILURE);
+        }
+        
+   int clientCount = 0;
     while(1){
 
         clientCount++;
@@ -157,11 +218,6 @@ void run_server(){
             break;
         }
 
-
-        if ((listen(socket_server, 5))){
-            perror("Faild listen");
-            exit(EXIT_FAILURE);
-        }
 
         if((socket_client = accept(socket_server, (struct sockaddr *)&client_addres, &len)) < 0){
             perror("Faild to accept");
@@ -198,4 +254,17 @@ void run_server(){
 
     }
 
+}
+
+
+int main(){
+    // date_init();
+    // init_log_file();
+    // init_db(&global_time);
+    // date_init();
+    run_server();
+    // clientBind();
+    
+
+    return 0;
 }

@@ -16,11 +16,11 @@ void init_logger()
 #define LOG(fmt, ...) do { fprintf(flog, "%s %s %s:%d: " fmt "\n", __DATE__, __TIME__, __FILE__, __LINE__, ##__VA_ARGS__); } while (0)
 */
 
-void add_note(){
+s_db_entry *add_note(){
 
     //XXX BAD APPROACH CONSTRUCTING LOGS! Consider using define (above)
     //XXX LOG("What a fuck is going on?");
-    struct save_log save_log;// = malloc(sizeof(save_log));
+    // struct save_log save_log;// = malloc(sizeof(save_log));
 
     s_db_entry *new_note = malloc(sizeof(s_db_entry));
     printf("Введіть заголовок: ");
@@ -43,47 +43,31 @@ void add_note(){
                 // printf("SUPER");
             } else {
                 printf("Error enter date\n");
-                return;
+                exit(EXIT_FAILURE);
             }
     } else {
         printf("format is not correct\n");
         // fgets(input, sizeof(input), stdin);
         int c;
         while((c = getchar()) != '\n'){}
-        return;
+        exit(EXIT_FAILURE);
     }
-
-
-    strcpy(save_log.title, new_note->title); 
-    strcpy(save_log.body, new_note->body);
-    save_log.due_time = new_note->due_time;
-
-
-    // write_log(&save_log);
-    // store_note(new_note);
     
 
     // free(new_note);
-    printf("Запис додано!\n");
+    // printf("Запис додано!\n");
+    return new_note;
 }
 
 
 
 
-void show_plansCertainDay(){
-    struct tm date; //= { 0 };
+void show_plansCertainDay(cli_req *request){
     printf("Введіть дату (у форматі \"dd.mm.yyyy\"): ");
 
-    if(scanf("%d.%d.%d", &date.tm_mday, &date.tm_mon, &date.tm_year) != 3)
+    if(scanf("%d.%d.%d", &request->note->due_time.tm_mday, &request->note->due_time.tm_mon, &request->note->due_time.tm_year) != 3)
         printf("Помилка введення дати. Спробуйте ще раз.\n");
     
-    // char filename[SIZE_FILENAME];
-    // sprintf(filename, "%02d.%02d.%04d", date.tm_mday, date.tm_mon, date.tm_year);
-    // printf("%s\n", filename);
-
-
-
-    // get_note_by_date(&date);
     
 }
 
@@ -128,28 +112,36 @@ void show_plansCertainDay(){
 // }
 
 // Use DB for this purpose
-void deleteNote(){
-    struct tm date;
+void deleteNote(cli_req *request){
 
 
     printf("Введіть дату нотатки яку хочете видалити (у форматі \"dd.mm.yyyy\"): ");
-    
-    if(scanf("%02d.%02d.%04d", &date.tm_mday, &date.tm_mon, &date.tm_year) != 3){
+    // printf("Введіть назву нотатки: ");
+    if(scanf("%02d.%02d.%04d", &request->note->due_time.tm_mday, &request->note->due_time.tm_mon, &request->note->due_time.tm_year) != 3){
         perror("Погано введена дата!");
-        return;
+        // return;
+        exit(EXIT_FAILURE);
     }
-    // char filename[SIZE_FILENAME];
-    // sprintf(filename, "%02d.%02d.%04d", date.tm_mday, date.tm_mon, date.tm_year);
+
+    // char *filename = malloc(SIZE_FILENAME);
+    // if(scanf("%s", filename) != 1){
+    //     perror("Погано введена нотатка!");
+    //     // return;
+    //     exit(EXIT_FAILURE);
+    // }
+
+    // int lenFilename = strlen(filename);
+    // filename[lenFilename] = '\n';
+
+    // sprintf(request, "%s")
+    // sprintf(filename, "%s", note->title);
     // printf("%s\n", filename);
 
 
     //XXX MICHAEL pass struct tm * here
     // db_delete_note(&date);
-    printf("Нотатка видалена\n");
+    // printf("Нотатка видалена\n");
 }
-
-
-
 
 
 void display(){
@@ -162,42 +154,70 @@ void display(){
 }
 
 
-void make_print(){
+
+int delete_handler(s_db_entry *list) {
+    //display the list to the screen
+    //return the index of the selected entry to the clie
+    return 0;
+}
+
+
+cli_req *make_print(){
     int choice;
+    // s_db_entry *note; // = (s_db_entry *)malloc(sizeof(s_db_entry));
+
+    cli_req *request = malloc(sizeof(cli_req));
+    request->note = malloc(sizeof(s_db_entry));
+
+    // char *getSprintNote = (char *)malloc(sizeof(2048));
+    // char *request;
+
     display();
     scanf("%d%*c", &choice);
     switch(choice){
         case 1:
-            add_note();
-            printf("\n");
+            request->note = add_note();
+            request->method = STORE;
+            // printf("\n");
             break;
         case 2:
-            show_plansCertainDay();
-            printf("\n");
+            show_plansCertainDay(request);
+            request->method = GET;
             break;
         case 3:
             // change_notes();
             printf("\n");
             break;
         case 4:
-            deleteNote();
+            deleteNote(request);
+            request->method = DELETE;
+            //MYKHAILO create a struct with two fields:
+            // 1. User input (date of the note in this case)
+            // 2. Command from user (DELETE in this case)
+            // sprintf(getSprintNote, "%s%s%s%s", "DELETE\n", request, "NULL\n", "NULL\n");
+            // free(request);
             break;
         case 5:
             printf("Good bay!\n");
             // free_list(buffer_notes);
-            free_list(near_notes);
+            // free_list(near_notes);
             exit(0);
         default:
             printf("ERRor");
     }
+
+    // free(request);
+    //MYKHAILO: return user_input struct (see line 208)
+    return request;
 }
 
 
 void date_init(){
-    db_init_date();
+    time_t local_time = time(NULL);
 
+    global_time = *localtime(&local_time);
     //XXX WHY? ONLY FUNCTIONS! NO VARIABLES! notebook.c and database.c should communicate via function ONLY!
-    global_time = real_date;
+    // global_time = real_date;
     global_time.tm_mon -= 1;
     global_time.tm_year -= 1900;
 
@@ -208,25 +228,3 @@ void date_init(){
     printf("%s", asctime(&global_time));
     printf("%s\n ******\n", date_time);
 }
-
-
-
-// int main(){
-//     //XXX This function is redundant. All off the logic may be done in the init_db function
-//     date_init();
-//     //init_log_file();
-    
-//     run_server();
-//     init_db(&global_time);
-//     // init_logger();
-//     while(1){
-//         display_list(near_notes);
-//         // display_list(buffer_notes);
-//         make_print();
-    
-//     }
-    
-
-//     // free_list(near_notes);
-//     return 0;
-// }
