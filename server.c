@@ -19,8 +19,8 @@ enum requestMethod getRequestMethod(char *request){
 
 char *returnGet(s_db_entry *note){
 
-    char *get = (char *)malloc(2048);
-    char *sprintfNote = (char *)malloc(2048);
+    char *get = (char *)calloc(2048, sizeof(char));
+    char *sprintfNote = (char *)calloc(2048, sizeof(char));
     while (note){
         sprintf(sprintfNote, "%s%s%d.%d.%d", note->title, note->body, note->due_time.tm_mday, note->due_time.tm_mon, note->due_time.tm_year);
         strcat(get, sprintfNote);
@@ -28,6 +28,7 @@ char *returnGet(s_db_entry *note){
         note = note->next;
     }
 
+    // printf("returnGET: %s\n", get);
 
     free(sprintfNote);
     return get;
@@ -35,12 +36,9 @@ char *returnGet(s_db_entry *note){
 
 
 char *creatingRequest(enum requestMethod method, s_db_entry *note){
-    char *get = malloc(2048);
+    char *get = (char *)calloc(2048, sizeof(char));
     s_db_entry *tmp = NULL;
     char *request = NULL;
-    // s_db_entry 
-
-
     switch (method) {
     case STORE:
         // printf("case: STORE\n");
@@ -65,6 +63,8 @@ char *creatingRequest(enum requestMethod method, s_db_entry *note){
         perror("request bad");
         break;
     }
+
+
     free(tmp);
     free(request);
     return get;
@@ -116,20 +116,28 @@ void *clientHandler(void *arg){
     char buffer[BUFFER_SIZE] = {0};
     s_db_entry *note = NULL;
     char *messange;
+    // char *near;
     int number = 0;
     // int byteread;
+    int size_byte = 0;
 
+    while(1){
 
-    loading_near_notes();
-    buffer = *returnGet(near_notes);
-    if (recv(clientSocket, buffer, sizeof(int), 0) == -1){
-        perror("error recv");
-        exit(EXIT_FAILURE);
+    // display_list(near_notes);
+    if(near_notes != NULL){
+        messange = returnGet(near_notes);
+        size_byte = strlen(messange);
+        if (send(clientSocket, messange, size_byte, 0) == -1){
+            perror("error recv");
+            exit(EXIT_FAILURE);
+        }
+        // printf("returnGET: %s\n", messange);
+        memset(messange, 0, size_byte);
+        size_byte = 0;
     }
-    memset(buffer, 0, BUFFER_SIZE);
 
     int bytesRead;
-    while((bytesRead = read(clientSocket, buffer, sizeof(buffer)))){
+        bytesRead = read(clientSocket, buffer, sizeof(buffer));
         // printf("Read bytes: %d\n", bytesRead);
         buffer[bytesRead] = '\0';
         // printf("Read buffer: %s\n", buffer);
@@ -210,6 +218,8 @@ void run_server(){
         }
         
    int clientCount = 0;
+    loading_near_notes();
+
     while(1){
 
         clientCount++;

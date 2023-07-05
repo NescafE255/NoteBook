@@ -228,3 +228,6 @@ void date_init(){
     printf("%s", asctime(&global_time));
     printf("%s\n ******\n", date_time);
 }
+
+
+

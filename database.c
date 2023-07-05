@@ -198,18 +198,12 @@ void db_update_near_notes(s_db_entry *note)
 void store_note(s_db_entry *note)
 {
 
-    // db_update_near_notes(note);
-    
-
     char *out;
-    // char infohash[SIZE_HASH];
     char filename[SIZE_FILENAME];
     sprintf(filename, "%s%02d_%d", DB_DIR, note->due_time.tm_mon, note->due_time.tm_year);
     s_db_entry *buffer = NULL;
-    // printf("%s\n", filename);
 
     
-    // memset(out, 0, SIZE_HASH);
     int size = return_Size_filename(filename);
     FILE *fp = fopen(filename, "r+");
     if (fp == NULL){
@@ -229,10 +223,6 @@ void store_note(s_db_entry *note)
         fputs("\n", fp);
         save_file(note, fp);
         db_update_near_notes(note);
-        // memset(out, 0, SIZE_HASH);
-        // OPENSSL_free(out);
-        // out = NULL;
-        // free(note);
         note = NULL;
         fclose(fp);
         return;
@@ -240,32 +230,14 @@ void store_note(s_db_entry *note)
 
     fseek(fp, 33, SEEK_SET);
     buffer = get_note_list(fp);
-    // out = hash_md5(buffer);
-    // printf("HASH NEW FILES:  %s\n", out);
-    // printf("HASH SAVE FILES: %s\n", file_hash);
 
 
     if(db_check_hash(fp, buffer) == 0){
-        // printf("ADD NEW NOTE\n");
 
         s_db_entry *temp = note_dup(note);
-
-        // printf("ADD NEW NOTE2\n");
-
         append(&buffer, temp);
-
-        // printf("ADD NEW NOTE3\n");
-
         db_update_near_notes(note);
 
-        // printf("ADD NEW NOTE4\n");
-
-        // OPENSSL_free(out);
-        // if (out != NULL){
-        //     printf("%s\n", out);
-        //     OPENSSL_free(out);
-        //     memset(out, 0, SIZE_HASH);
-        // }
 
     } else {
         unlink(filename);
@@ -294,7 +266,6 @@ void store_note(s_db_entry *note)
 
 
 
-    // out = NULL;
     out = hash_md5(buffer);
     rewind(fp);
     fputs(out, fp);
@@ -309,15 +280,6 @@ void store_note(s_db_entry *note)
     }
 
     free_list(buffer);
-    // free(note);
-    // buffer = NULL;
-    // OPENSSL_free(out);
-    // if (out != NULL){
-    //     printf("%s\n", out);
-    //     // OPENSSL_free(out);
-    //     // memset(out, 0, SIZE_HASH);
-    //     // out = NULL;
-    // }
     fclose(fp);
 }
 
